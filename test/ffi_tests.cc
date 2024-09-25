@@ -167,8 +167,14 @@ NAN_METHOD(Strtoul) {
 
   Local<Value> endptr_arg = info[1];
   endptr = (char **)Buffer::Data(endptr_arg.As<Object>());
-
+#if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
+  (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
+  v8::Isolate *isolate = v8::Isolate::GetCurrent();
+  v8::Local<Context> ctx = isolate->GetCurrentContext();
+  base = info[2]->Int32Value(ctx).FromJust();
+#else 
   base = info[2]->Int32Value();
+#endif
 
   unsigned long val = strtoul(*buf, endptr, base);
 
@@ -300,18 +306,34 @@ void Initialize(Handle<Object> target) {
   // http://support.microsoft.com/kb/37507
   float x = 2.3f;
 #endif
-
+  v8::Isolate *isolate = v8::Isolate::GetCurrent();
+  v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+ 
   // atoi and abs here for testing purposes
-  target->Set(Nan::New<String>("atoi").ToLocalChecked(), WrapPointer((char *)atoi));
+  target->Set(ctx, Nan::New<String>("atoi").ToLocalChecked(), WrapPointer((char *)atoi));
 
   // Windows has multiple `abs` signatures, so we need to manually disambiguate
   int (*absPtr)(int)(abs);
-  target->Set(Nan::New<String>("abs").ToLocalChecked(), WrapPointer((char *)absPtr));
+  target->Set(ctx, Nan::New<String>("abs").ToLocalChecked(), WrapPointer((char *)absPtr));
 
   // sprintf pointer; used in the varadic tests
-  target->Set(Nan::New<String>("sprintf").ToLocalChecked(), WrapPointer((char *)sprintf));
-
+  target->Set(ctx, Nan::New<String>("sprintf").ToLocalChecked(), WrapPointer((char *)sprintf));
   // hard-coded `strtoul` binding, for the benchmarks
+#if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
+  (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
+  Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(Strtoul)->GetFunction(ctx).ToLocalChecked());
+
+  Nan::Set(target, Nan::New<String>("set_cb").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(SetCb)->GetFunction(ctx).ToLocalChecked());
+  Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(CallCb)->GetFunction(ctx).ToLocalChecked());
+  Nan::Set(target, Nan::New<String>("call_cb_from_thread").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(
+      CallCbFromThread)->GetFunction(ctx).ToLocalChecked());
+  Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction(ctx).ToLocalChecked());
+#else
   Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
     Nan::New<FunctionTemplate>(Strtoul)->GetFunction());
 
@@ -323,20 +345,20 @@ void Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(CallCbFromThread)->GetFunction());
   Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction());
-
+#endif
   // also need to test these custom functions
-  target->Set(Nan::New<String>("double_box").ToLocalChecked(), WrapPointer((char *)double_box));
-  target->Set(Nan::New<String>("double_box_ptr").ToLocalChecked(), WrapPointer((char *)double_box_ptr));
-  target->Set(Nan::New<String>("area_box").ToLocalChecked(), WrapPointer((char *)area_box));
-  target->Set(Nan::New<String>("area_box_ptr").ToLocalChecked(), WrapPointer((char *)area_box_ptr));
-  target->Set(Nan::New<String>("create_box").ToLocalChecked(), WrapPointer((char *)create_box));
-  target->Set(Nan::New<String>("add_boxes").ToLocalChecked(), WrapPointer((char *)add_boxes));
-  target->Set(Nan::New<String>("int_array").ToLocalChecked(), WrapPointer((char *)int_array));
-  target->Set(Nan::New<String>("array_in_struct").ToLocalChecked(), WrapPointer((char *)array_in_struct));
-  target->Set(Nan::New<String>("callback_func").ToLocalChecked(), WrapPointer((char *)callback_func));
-  target->Set(Nan::New<String>("play_ping_pong").ToLocalChecked(), WrapPointer((char *)play_ping_pong));
-  target->Set(Nan::New<String>("test_169").ToLocalChecked(), WrapPointer((char *)test_169));
-  target->Set(Nan::New<String>("test_ref_56").ToLocalChecked(), WrapPointer((char *)test_ref_56));
+  target->Set(ctx, Nan::New<String>("double_box").ToLocalChecked(), WrapPointer((char *)double_box));
+  target->Set(ctx, Nan::New<String>("double_box_ptr").ToLocalChecked(), WrapPointer((char *)double_box_ptr));
+  target->Set(ctx, Nan::New<String>("area_box").ToLocalChecked(), WrapPointer((char *)area_box));
+  target->Set(ctx, Nan::New<String>("area_box_ptr").ToLocalChecked(), WrapPointer((char *)area_box_ptr));
+  target->Set(ctx, Nan::New<String>("create_box").ToLocalChecked(), WrapPointer((char *)create_box));
+  target->Set(ctx, Nan::New<String>("add_boxes").ToLocalChecked(), WrapPointer((char *)add_boxes));
+  target->Set(ctx, Nan::New<String>("int_array").ToLocalChecked(), WrapPointer((char *)int_array));
+  target->Set(ctx, Nan::New<String>("array_in_struct").ToLocalChecked(), WrapPointer((char *)array_in_struct));
+  target->Set(ctx, Nan::New<String>("callback_func").ToLocalChecked(), WrapPointer((char *)callback_func));
+  target->Set(ctx, Nan::New<String>("play_ping_pong").ToLocalChecked(), WrapPointer((char *)play_ping_pong));
+  target->Set(ctx, Nan::New<String>("test_169").ToLocalChecked(), WrapPointer((char *)test_169));
+  target->Set(ctx, Nan::New<String>("test_ref_56").ToLocalChecked(), WrapPointer((char *)test_ref_56));
 }
 
 } // anonymous namespace

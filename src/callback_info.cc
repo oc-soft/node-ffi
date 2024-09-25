@@ -109,9 +109,19 @@ NAN_METHOD(CallbackInfo::Callback) {
 
   // Args: cif pointer, JS function
   // TODO: Check args
+#if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
+  (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
+  v8::Isolate *isolate = v8::Isolate::GetCurrent();
+  v8::Local<Context> ctx = isolate->GetCurrentContext();
+  ffi_cif *cif = (ffi_cif *)Buffer::Data(
+    info[0]->ToObject(ctx).ToLocalChecked());
+  size_t resultSize = info[1]->Int32Value(ctx).FromJust();
+  int argc = info[2]->Int32Value(ctx).FromJust();
+#else 
   ffi_cif *cif = (ffi_cif *)Buffer::Data(info[0]->ToObject());
   size_t resultSize = info[1]->Int32Value();
   int argc = info[2]->Int32Value();
+#endif
   Local<Function> errorReportCallback = Local<Function>::Cast(info[3]);
   Local<Function> callback = Local<Function>::Cast(info[4]);
 
@@ -207,9 +217,16 @@ void CallbackInfo::Invoke(ffi_cif *cif, void *retval, void **parameters, void *u
 
 void CallbackInfo::Initialize(Handle<Object> target) {
   Nan::HandleScope scope;
-
+#if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
+  (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
+  v8::Isolate *isolate = v8::Isolate::GetCurrent();
+  v8::Local<Context> ctx = isolate->GetCurrentContext();
+  Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(Callback)->GetFunction(ctx).ToLocalChecked());
+#else
 	Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
 		Nan::New<FunctionTemplate>(Callback)->GetFunction());
+#endif
 
   // initialize our threaded invokation stuff
 #ifdef WIN32
