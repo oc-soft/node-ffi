@@ -34,34 +34,151 @@
 using namespace v8;
 using namespace node;
 
+class callback_info;
+
 /*
  * Converts an arbitrary pointer to a node Buffer with 0-length
  */
 
 void wrap_pointer_cb(char *data, void *hint);
 
-inline Local<Value> WrapPointer(char *ptr, size_t length) {
-  Nan::EscapableHandleScope scope;
-  return scope.Escape(Nan::NewBuffer(ptr, length, wrap_pointer_cb, NULL).ToLocalChecked());
+inline Local<Value> WrapPointer(Isolate* isolate,
+  char *ptr, size_t length, bool external) {
+
+  Local<Value> res;
+  if (!external) {
+    Nan::EscapableHandleScope scope;
+    res = scope.Escape(Nan::NewBuffer(ptr, length, wrap_pointer_cb, NULL).ToLocalChecked());
+  } else {
+    Local<ArrayBuffer> ab = ArrayBuffer::New(isolate, sizeof(void*));
+    char** destPtr = reinterpret_cast<char **>(ab->Data());
+    *destPtr = ptr;
+    MaybeLocal<Uint8Array> bfPtr = Buffer::New(isolate, ab, 0, sizeof(void*));
+
+    if (!bfPtr.IsEmpty()) {
+      Local<Uint8Array> res = bfPtr.ToLocalChecked();
+      Maybe<bool> propRes = res->DefineOwnProperty(
+        isolate->GetCurrentContext(),
+        String::NewFromUtf8(isolate, "external").ToLocalChecked(),
+        Boolean::New(isolate, true),
+        static_cast<PropertyAttribute>(
+            PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
+    } else {
+      res = bfPtr.ToLocalChecked();
+    }
+  }
+  return res;
 }
 
-inline Local<Value> WrapPointer(char *ptr) {
-  return WrapPointer(ptr, 0);
+
+inline Local<Value> WrapPointer(
+  Isolate* isolate, char *ptr, bool external) {
+  return WrapPointer(isolate, ptr, 0, external);
 }
 
+inline char* UnwrapPointer(const Local<Value>& dataobj, bool external) {
+  char* result = nullptr;
+  if (dataobj->IsUint8Array()) {
+    Local<Uint8Array> ptrArray = Local<Uint8Array>::Cast(dataobj);
+    char *ptr = reinterpret_cast<char*>(ptrArray->Buffer()->Data()); 
+    ptr += ptrArray->ByteOffset();
+    if (!external) {
+      result = ptr;
+    } else {
+      char** ptrRef = reinterpret_cast<char**>(ptr);
+      result = *ptrRef;
+    }
+  }
+  return result;
+}
+
+
+inline bool IsExternalPtr(Isolate* isolate, const Local<Value>& dataobj) {
+  bool result = false;
+  if (dataobj->IsObject()) {
+    Local<Object> ptrObj = dataobj.As<Object>(); 
+    
+    MaybeLocal<Value> externalValue = ptrObj->Get(isolate->GetCurrentContext(), 
+      String::NewFromUtf8(isolate, "external").ToLocalChecked());
+    if (!externalValue.IsEmpty()) {
+      result = externalValue.ToLocalChecked()->IsTrue();
+    }
+  } 
+  return result;
+}
+
+inline char* UnwrapPointer(Isolate* isolate, const Local<Value>& dataobj) {
+  return UnwrapPointer(dataobj, IsExternalPtr(isolate, dataobj));
+}
+ 
 /*
  * Class used to store stuff during async ffi_call() invokations.
  */
 
 class AsyncCallParams {
   public:
-    ffi_status result;
-    char *err;
-    char *cif;
-    char *fn;
-    char *res;
-    char *argv;
-    Nan::Callback *callback;
+    AsyncCallParams() = default;
+
+    ~AsyncCallParams();
+#if __OBJC__ || __OBJC2__
+    bool
+    HasErr() const;
+
+    id
+    GetErrRef() const;
+
+    void
+    SetErr(
+        id err);
+
+    MaybeLocal<v8::Object>
+    GetErr(Isolate* isolate);
+#endif
+
+    void
+    SetCif(
+        ffi_cif* cif);
+
+    ffi_cif*
+    GetCif() const;
+
+    void
+    (*GetFn() const)(void);
+
+    void
+    SetFn(
+        void (*fn)(void));
+
+    void*
+    GetRes() const;
+
+    void
+    SetRes(
+        void* res);
+
+    void**
+    GetArgv() const;
+
+    void
+    SetArgv(
+        void** argv);
+
+    void
+    SetCallback(
+        std::unique_ptr<Nan::Callback>& callback);
+
+    std::unique_ptr<Nan::Callback>&
+    GetCallback();
+
+  private:
+#if __OBJC__ || __OBJC2__
+    id err = Nil;
+#endif
+    ffi_cif *cif = nullptr;
+    void (*fn)(void) = nullptr;
+    void *res = nullptr;
+    void **argv = nullptr;
+    std::unique_ptr<Nan::Callback> callback;
 };
 
 class FFI {
@@ -81,22 +198,6 @@ class FFI {
 };
 
 
-/*
- * One of these structs gets created for each `ffi.Callback()` invokation in
- * JavaScript-land. It contains all the necessary information when invoking the
- * pointer to proxy back to JS-land properly. It gets created by
- * `ffi_closure_alloc()`, and free'd in the closure_pointer_cb function.
- */
-
-typedef struct _callback_info {
-  ffi_closure closure;           // the actual `ffi_closure` instance get inlined
-  void *code;                    // the executable function pointer
-  Nan::Callback* errorFunction;    // JS callback function for reporting catched exceptions for the process' event loop
-  Nan::Callback* function;         // JS callback function the closure represents
-  // these two are required for creating proper sized WrapPointer buffer instances
-  int argc;                      // the number of arguments this function expects
-  size_t resultSize;             // the size of the result pointer
-} callback_info;
 
 class ThreadedCallbackInvokation;
 

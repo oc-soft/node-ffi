@@ -6,6 +6,10 @@
           'src/ffi.cc'
         , 'src/callback_info.cc'
         , 'src/threaded_callback_invokation.cc'
+        , 'src/callback-info-i.cc'
+        , 'src/code-object.cc'
+        , 'src/async-call-params.cc'
+        , 'src/objc-object-wrap.cc'
       ],
       'include_dirs': [
         '<!(node -e "require(\'nan\')")'

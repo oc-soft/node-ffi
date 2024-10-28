@@ -6,6 +6,9 @@
 #include <node_buffer.h>
 #include <node_version.h>
 #include "ffi.h"
+#include "callback-info.h"
+#include "callback-info-i.h"
+#include "code-object.h"
 
 #if !(NODE_VERSION_AT_LEAST(0, 11, 15))
   #ifdef WIN32
@@ -30,22 +33,6 @@ std::queue<ThreadedCallbackInvokation *> CallbackInfo::g_queue;
 uv_async_t         CallbackInfo::g_async;
 
 /*
- * Called when the `ffi_closure *` pointer (actually the "code" pointer) get's
- * GC'd on the JavaScript side. In this case we have to unwrap the
- * `callback_info *` struct, dispose of the JS function Persistent reference,
- * then finally free the struct.
- */
-
-void closure_pointer_cb(char *data, void *hint) {
-  callback_info *info = reinterpret_cast<callback_info *>(hint);
-  // dispose of the Persistent function reference
-  delete info->function;
-  info->function = NULL;
-  // now we can free the closure data
-  ffi_closure_free(info);
-}
-
-/*
  * Invokes the JS callback function.
  */
 
@@ -54,31 +41,56 @@ void CallbackInfo::DispatchToV8(callback_info *info, void *retval, void **parame
 
   static const char* errorMessage = "ffi fatal: callback has been garbage collected!";
 
-  if (info->function == NULL) {
+  if (!info->GetFunction()) {
     // throw an error instead of segfaulting.
     // see: https://github.com/rbranson/node-ffi/issues/72
     if (dispatched) {
         Local<Value> errorFunctionArgv[1];
         errorFunctionArgv[0] = Nan::New<String>(errorMessage).ToLocalChecked();
-        info->errorFunction->Call(1, errorFunctionArgv);
+        info->GetErrorFunction()->Call(1, errorFunctionArgv);
     }
     else {
       Nan::ThrowError(errorMessage);
     }
   } else {
-    // invoke the registered callback function
-    Local<Value> functionArgv[2];
-    functionArgv[0] = WrapPointer((char *)retval, info->resultSize);
-    functionArgv[1] = WrapPointer((char *)parameters, sizeof(char *) * info->argc);
-    Local<Value> e = info->function->Call(2, functionArgv);
-    if (!e->IsUndefined()) {
-      if (dispatched) {
-        Local<Value> errorFunctionArgv[1];
-        errorFunctionArgv[0] = e;
-        info->errorFunction->Call(1, errorFunctionArgv);
-      } else {
-        Nan::ThrowError(e);
+    v8::Isolate *isolate = v8::Isolate::GetCurrent();
+
+    MaybeLocal<Object> resBuf = Buffer::New(isolate,
+      info->GetResultSize());
+    MaybeLocal<Object> argBuf = Buffer::New(isolate,
+      sizeof(char *) * info->GetArgc());
+    
+    if (!resBuf.IsEmpty() && !argBuf.IsEmpty()) {
+      Local<Uint8Array> resBufArray = Local<Uint8Array>::Cast(
+        resBuf.ToLocalChecked());
+      std::memcpy(resBufArray->Buffer()->Data(),
+        retval, info->GetResultSize());
+
+      Local<Uint8Array> argBufArray = Local<Uint8Array>::Cast(
+        argBuf.ToLocalChecked());
+      std::memcpy(argBufArray->Buffer()->Data(), parameters,
+        sizeof(char*) * info->GetArgc());
+    
+      // invoke the registered callback function
+      Local<Value> functionArgv[2];
+      functionArgv[0] = resBufArray;
+      functionArgv[1] = argBufArray;
+     
+      Local<Value> e = info->GetFunction()->Call(2, functionArgv);
+      if (!e->IsUndefined()) {
+        if (dispatched) {
+          Local<Value> errorFunctionArgv[1];
+          errorFunctionArgv[0] = e;
+          info->GetErrorFunction()->Call(1, errorFunctionArgv);
+        } else {
+          Nan::ThrowError(e);
+        }
       }
+    } else {
+      Local<Value> errorFunctionArgv[1];
+      static const char* outOfMemory = "ffi fatal: out of memory";
+      errorFunctionArgv[0] = Nan::New<String>(outOfMemory).ToLocalChecked();
+      info->GetErrorFunction()->Call(1, errorFunctionArgv);
     }
   }
 }
@@ -109,59 +121,79 @@ NAN_METHOD(CallbackInfo::Callback) {
 
   // Args: cif pointer, JS function
   // TODO: Check args
+  v8::Isolate *isolate = info.GetIsolate();
+  v8::Local<Context> ctx = isolate->GetCurrentContext();
+  ffi_cif *cif = (ffi_cif *)UnwrapPointer(isolate, info[0]);
+
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
-  v8::Isolate *isolate = v8::Isolate::GetCurrent();
-  v8::Local<Context> ctx = isolate->GetCurrentContext();
-  ffi_cif *cif = (ffi_cif *)Buffer::Data(
-    info[0]->ToObject(ctx).ToLocalChecked());
+
   size_t resultSize = info[1]->Int32Value(ctx).FromJust();
   int argc = info[2]->Int32Value(ctx).FromJust();
 #else 
-  ffi_cif *cif = (ffi_cif *)Buffer::Data(info[0]->ToObject());
   size_t resultSize = info[1]->Int32Value();
   int argc = info[2]->Int32Value();
 #endif
   Local<Function> errorReportCallback = Local<Function>::Cast(info[3]);
   Local<Function> callback = Local<Function>::Cast(info[4]);
-
-  callback_info *cbInfo;
   ffi_status status;
   void *code;
+  void* cbBuf;
+  cbBuf = ffi_closure_alloc(sizeof(callback_info), &code);
 
-  cbInfo = reinterpret_cast<callback_info *>(ffi_closure_alloc(sizeof(callback_info), &code));
+  std::unique_ptr<Nan::Callback> errorFunction(
+    new (std::nothrow) Nan::Callback(errorReportCallback));
+  std::unique_ptr<Nan::Callback> function(
+    new (std::nothrow) Nan::Callback(callback));
 
-  if (!cbInfo) {
+  if (!cbBuf || !function || !errorFunction) {
     return THROW_ERROR_EXCEPTION("ffi_closure_alloc() Returned Error");
   }
-
-  cbInfo->resultSize = resultSize;
-  cbInfo->argc = argc;
-  cbInfo->errorFunction = new Nan::Callback(errorReportCallback);
-  cbInfo->function = new Nan::Callback(callback);
+  callback_info* cbInfo;
+  cbInfo = new (cbBuf) callback_info();
+  cbInfo->SetResultSize(resultSize);
+  cbInfo->SetArgc(argc);
+  cbInfo->SetErrorFunction(errorFunction);
+  cbInfo->SetFunction(function);
 
   // store a reference to the callback function pointer
   // (not sure if this is actually needed...)
-  cbInfo->code = code;
+  cbInfo->SetCode(code);
 
   //CallbackInfo *self = new CallbackInfo(callback, closure, code, argc);
 
   status = ffi_prep_closure_loc(
-    (ffi_closure *)cbInfo,
+    cbInfo,
     cif,
     Invoke,
-    (void *)cbInfo,
+    cbInfo,
     code
   );
 
   if (status != FFI_OK) {
-    ffi_closure_free(cbInfo);
+    callback_info::Free(cbInfo);
     return THROW_ERROR_EXCEPTION_WITH_STATUS_CODE("ffi_prep_closure() Returned Error", status);
   }
 
-  info.GetReturnValue().Set(
-    Nan::NewBuffer((char *)code, sizeof(void*), closure_pointer_cb, cbInfo).ToLocalChecked()
-  );
+  Local<Object> codeBuff = Local<Object>::Cast(WrapPointer(isolate,
+    (char*)code, sizeof(void*), true)); 
+   
+  ffi::CodeObject* codeObj = new (std::nothrow) ffi::CodeObject(cbInfo);
+  if (codeObj) {
+    Local<Object> jsCodeObj = v8::Object::New(isolate);
+    codeObj->AttachTo(jsCodeObj);
+    codeBuff->DefineOwnProperty(
+        isolate->GetCurrentContext(),
+        String::NewFromUtf8(isolate, "code").ToLocalChecked(),
+        jsCodeObj,
+        static_cast<PropertyAttribute>(
+           PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
+    info.GetReturnValue().Set(codeBuff);
+  } else {
+    callback_info::Free(cbInfo);
+
+    Nan::ThrowError("outof memory");
+  }
 }
 
 /*
@@ -224,8 +256,8 @@ void CallbackInfo::Initialize(Handle<Object> target) {
   Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
     Nan::New<FunctionTemplate>(Callback)->GetFunction(ctx).ToLocalChecked());
 #else
-	Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
-		Nan::New<FunctionTemplate>(Callback)->GetFunction());
+  Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
+    Nan::New<FunctionTemplate>(Callback)->GetFunction());
 #endif
 
   // initialize our threaded invokation stuff
