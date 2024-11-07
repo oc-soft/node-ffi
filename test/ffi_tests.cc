@@ -6,12 +6,6 @@
 #include "node_buffer.h"
 #include <nan.h>
 
-#ifdef WIN32
-#include <process.h>
-#else
-#include <pthread.h>
-#endif // WIN32
-
 using namespace v8;
 using namespace node;
 
@@ -204,37 +198,6 @@ NAN_METHOD(CallCb) {
   info.GetReturnValue().SetUndefined();
 }
 
-// Invoke callback from a native (non libuv) thread:
-#ifdef WIN32
-void invoke_callback(void* args) {
-#else
-void* invoke_callback(void* args) {
-#endif // WIN32
-  cb c = callback;
-  if (c != NULL) {
-    c();
-  }
-#ifndef WIN32
-  return NULL;
-#endif // WIN32
-}
-
-NAN_METHOD(CallCbFromThread) {
-  Nan::HandleScope();
-  if (callback == NULL) {
-    return Nan::ThrowError("you must call \"set_cb()\" first");
-  }
-  else {
-#ifdef WIN32
-    _beginthread(&invoke_callback, 0, NULL);
-#else
-    pthread_t thread;
-    pthread_create(&thread, NULL, &invoke_callback, NULL);
-#endif // WIN32
-  }
-  info.GetReturnValue().SetUndefined();
-}
-
 void AsyncCbCall(uv_work_t *req) {
   cb c = (cb)req->data;
   c();
@@ -328,9 +291,6 @@ void Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(SetCb)->GetFunction(ctx).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCb)->GetFunction(ctx).ToLocalChecked());
-  Nan::Set(target, Nan::New<String>("call_cb_from_thread").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(
-      CallCbFromThread)->GetFunction(ctx).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction(ctx).ToLocalChecked());
 #else
@@ -341,8 +301,6 @@ void Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(SetCb)->GetFunction());
   Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCb)->GetFunction());
-  Nan::Set(target, Nan::New<String>("call_cb_from_thread").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(CallCbFromThread)->GetFunction());
   Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction());
 #endif
