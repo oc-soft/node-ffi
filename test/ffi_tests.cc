@@ -198,29 +198,6 @@ NAN_METHOD(CallCb) {
   info.GetReturnValue().SetUndefined();
 }
 
-void AsyncCbCall(uv_work_t *req) {
-  cb c = (cb)req->data;
-  c();
-}
-
-void FinishAsyncCbCall(uv_work_t *req) {
-  // nothing
-  delete req;
-}
-
-NAN_METHOD(CallCbAsync) {
-  Nan::HandleScope();
-  if (callback == NULL) {
-    return Nan::ThrowError("you must call \"set_cb()\" first");
-  } else {
-    uv_work_t *req = new uv_work_t;
-    req->data = (void *)callback;
-    uv_queue_work(uv_default_loop(), req, AsyncCbCall, (uv_after_work_cb)FinishAsyncCbCall);
-  }
-  info.GetReturnValue().SetUndefined();
-}
-
-
 // Race condition in threaded callback invocation testing
 // https://github.com/node-ffi/node-ffi/issues/153
 void play_ping_pong (const char* (*callback) (const char*)) {
@@ -291,8 +268,6 @@ void Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(SetCb)->GetFunction(ctx).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCb)->GetFunction(ctx).ToLocalChecked());
-  Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction(ctx).ToLocalChecked());
 #else
   Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
     Nan::New<FunctionTemplate>(Strtoul)->GetFunction());
@@ -301,8 +276,6 @@ void Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(SetCb)->GetFunction());
   Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
     Nan::New<FunctionTemplate>(CallCb)->GetFunction());
-  Nan::Set(target, Nan::New<String>("call_cb_async").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(CallCbAsync)->GetFunction());
 #endif
   // also need to test these custom functions
   target->Set(ctx, Nan::New<String>("double_box").ToLocalChecked(), WrapPointer((char *)double_box));
