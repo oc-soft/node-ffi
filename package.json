@@ -35,8 +35,10 @@
     "ref-array": "oc-soft/node-ref-array#master"
   },
   "scripts": {
-    "test": "node-gyp rebuild --directory test && node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec"
-  },
+    "test": "node-gyp rebuild --directory test && node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
+    "test-gdb": "node-gyp rebuild --debug --directory test && gdb --args node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
+    "test-only": "node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec"
+   },
   "repository": {
     "type": "git",
     "url": "http://github.com/oc-soft/node-ffi.git"

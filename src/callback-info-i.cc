@@ -85,7 +85,7 @@ callback_info::SetErrorFunction(
 const std::unique_ptr<Nan::Callback>&
 callback_info::GetFunction() const
 {
-    return errorFunction;
+    return function;
 }
 
 /**

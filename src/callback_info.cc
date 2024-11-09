@@ -61,22 +61,19 @@ void CallbackInfo::DispatchToV8(callback_info *info, void *retval, void **parame
       sizeof(char *) * info->GetArgc());
     
     if (!resBuf.IsEmpty() && !argBuf.IsEmpty()) {
-      Local<Uint8Array> resBufArray = Local<Uint8Array>::Cast(
-        resBuf.ToLocalChecked());
-      std::memcpy(resBufArray->Buffer()->Data(),
+      std::memcpy(Buffer::Data(resBuf.ToLocalChecked()),
         retval, info->GetResultSize());
 
-      Local<Uint8Array> argBufArray = Local<Uint8Array>::Cast(
-        argBuf.ToLocalChecked());
-      std::memcpy(argBufArray->Buffer()->Data(), parameters,
+      std::memcpy(Buffer::Data(argBuf.ToLocalChecked()), parameters,
         sizeof(char*) * info->GetArgc());
     
       // invoke the registered callback function
       Local<Value> functionArgv[2];
-      functionArgv[0] = resBufArray;
-      functionArgv[1] = argBufArray;
+      functionArgv[0] = resBuf.ToLocalChecked();
+      functionArgv[1] = argBuf.ToLocalChecked();
      
       Local<Value> e = info->GetFunction()->Call(2, functionArgv);
+
       if (!e->IsUndefined()) {
         if (dispatched) {
           Local<Value> errorFunctionArgv[1];
@@ -85,6 +82,13 @@ void CallbackInfo::DispatchToV8(callback_info *info, void *retval, void **parame
         } else {
           Nan::ThrowError(e);
         }
+      } else {
+        std::memcpy(retval,
+          Buffer::Data(resBuf.ToLocalChecked()),
+          info->GetResultSize());
+        std::memcpy(parameters,
+          Buffer::Data(argBuf.ToLocalChecked()),
+          sizeof(char*) * info->GetArgc());
       }
     } else {
       Local<Value> errorFunctionArgv[1];
@@ -180,7 +184,10 @@ NAN_METHOD(CallbackInfo::Callback) {
    
   ffi::CodeObject* codeObj = new (std::nothrow) ffi::CodeObject(cbInfo);
   if (codeObj) {
-    Local<Object> jsCodeObj = v8::Object::New(isolate);
+    Local<ObjectTemplate> jsCodeObjTemp = v8::ObjectTemplate::New(isolate);
+    jsCodeObjTemp->SetInternalFieldCount(1);
+    Local<Object> jsCodeObj = jsCodeObjTemp->NewInstance(
+      isolate->GetCurrentContext()).ToLocalChecked();
     codeObj->AttachTo(jsCodeObj);
     codeBuff->DefineOwnProperty(
         isolate->GetCurrentContext(),

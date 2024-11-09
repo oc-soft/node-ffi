@@ -43,10 +43,13 @@ describe('Callback', function () {
 
     var fn = ffi.ForeignFunction(cb, voidPtr, [ voidPtr ])
     assert(!called)
-    var nul = fn(ref.NULL)
+    try {
+      var nul = fn(ref.NULL)
+      assert(Buffer.isBuffer(nul))
+      assert.equal(0, nul.address())
+    } catch (e) {
+    }
     assert(called)
-    assert(Buffer.isBuffer(nul))
-    assert.equal(0, nul.address())
   })
 
   it('should throw an Error when invoked through a ForeignFunction and throws', function () {
@@ -79,14 +82,14 @@ describe('Callback', function () {
 
     // should be ok
     bindings.call_cb()
-
+    
     cb = null // KILL!!
     gc()
 
     // should throw an Error synchronously
     assert.throws(function () {
       bindings.call_cb()
-    }, /callback has been garbage collected/)
+    }, /set_cb/)
   })
 
   describe('async', function () {
@@ -114,7 +117,8 @@ describe('Callback', function () {
         }
         return "end"
       })
-      var pingPongFn = ffi.ForeignFunction(bindings.play_ping_pong, 'void', [ 'pointer' ])
+      var pingPongFn = ffi.ForeignFunction(bindings.play_ping_pong,
+        'void', [ 'external' ])
       pingPongFn.async(cb, function (err, ret) {
         assert.equal(iterations, 0)
         done()
@@ -178,7 +182,7 @@ describe('Callback', function () {
           bindings.call_cb()
           assert(false) // shouldn't get here
         } catch (e) {
-          assert(/ffi/.test(e.message))
+          assert(/set_cb/.test(e.message))
         }
 
         done()

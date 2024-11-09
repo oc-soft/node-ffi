@@ -56,13 +56,16 @@ inline Local<Value> WrapPointer(Isolate* isolate,
     MaybeLocal<Uint8Array> bfPtr = Buffer::New(isolate, ab, 0, sizeof(void*));
 
     if (!bfPtr.IsEmpty()) {
-      Local<Uint8Array> res = bfPtr.ToLocalChecked();
-      Maybe<bool> propRes = res->DefineOwnProperty(
+      Local<Uint8Array> resArray = bfPtr.ToLocalChecked();
+      Maybe<bool> propRes = resArray->DefineOwnProperty(
         isolate->GetCurrentContext(),
         String::NewFromUtf8(isolate, "external").ToLocalChecked(),
         Boolean::New(isolate, true),
         static_cast<PropertyAttribute>(
             PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
+      if (propRes.FromJust()) {
+        res = resArray;
+      }
     } else {
       res = bfPtr.ToLocalChecked();
     }
@@ -97,7 +100,6 @@ inline bool IsExternalPtr(Isolate* isolate, const Local<Value>& dataobj) {
   bool result = false;
   if (dataobj->IsObject()) {
     Local<Object> ptrObj = dataobj.As<Object>(); 
-    
     MaybeLocal<Value> externalValue = ptrObj->Get(isolate->GetCurrentContext(), 
       String::NewFromUtf8(isolate, "external").ToLocalChecked());
     if (!externalValue.IsEmpty()) {
