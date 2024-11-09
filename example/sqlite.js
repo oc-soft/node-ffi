@@ -20,7 +20,7 @@ var dbName = process.argv[2] || 'test.sqlite3'
 var sqlite3 = 'void' // `sqlite3` is an "opaque" type, so we don't know its layout
   , sqlite3Ptr = ref.refType(sqlite3)
   , sqlite3PtrPtr = ref.refType(sqlite3Ptr)
-  , sqlite3_exec_callback = 'pointer' // TODO: use ffi.Callback when #76 is implemented
+  , sqlite3_exec_callback = 'external' // TODO: use ffi.Callback when #76 is implemented
   , stringPtr = ref.refType('string')
 
 // create FFI'd versions of the libsqlite3 function we're interested in
@@ -78,7 +78,7 @@ var callback = ffi.Callback('int', ['void *', 'int', stringPtr, stringPtr], func
   return 0
 })
 
-var b = new Buffer('test')
+var b = new Buffer.from('test')
 SQLite3.sqlite3_exec.async(db, 'SELECT * FROM foo;', callback, b, null, function (err, ret) {
   if (err) throw err
   console.log('Total Rows: %j', rowCount)
