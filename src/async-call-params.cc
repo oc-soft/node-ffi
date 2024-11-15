@@ -1,4 +1,4 @@
-#include "ffi.h"
+#include "node-ffi/async-call-params.h"
 
 #if __OBJC__ || __OBJC2__
 #include "objc-object-wrap.h"

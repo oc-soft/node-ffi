@@ -3,16 +3,20 @@
     {
       'target_name': 'ffi_bindings',
       'sources': [
-          'src/ffi.cc'
-        , 'src/callback_info.cc'
+        'src/node-module.cc'
+        , 'src/ffi.cc'
+        , 'src/callback-info.cc'
         , 'src/threaded_callback_invokation.cc'
         , 'src/callback-info-i.cc'
         , 'src/code-object.cc'
         , 'src/async-call-params.cc'
         , 'src/objc-object-wrap.cc'
+        , 'src/wrap-pointer.cc'
+        , 'src/ffi-config.cc'
       ],
       'include_dirs': [
-        '<!(node -e "require(\'nan\')")'
+        '<!(node -e "require(\'nan\')")',
+        'include'
       ],
       'dependencies': [
         'deps/libffi/libffi.gyp:ffi'
@@ -22,6 +26,9 @@
           'sources': [
               'src/win32-dlfcn.cc'
           ],
+          'defines': [
+              'FFI_BUILDING'
+          ]
         }],
         ['OS=="mac"', {
           'xcode_settings': {

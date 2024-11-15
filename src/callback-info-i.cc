@@ -1,7 +1,6 @@
-#include "callback-info.h"
+#include "callback-info-i.h"
 #include <nan.h>
 
-#include "callback-info-i.h"
 
 /**
  * constructor

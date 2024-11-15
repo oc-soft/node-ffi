@@ -1,5 +1,6 @@
 #include <node.h>
-#include "ffi.h"
+#include "node-ffi.h"
+#include "threaded_callback_invokation.h"
 
 ThreadedCallbackInvokation::ThreadedCallbackInvokation(callback_info *cbinfo, void *retval, void **parameters) {
   m_cbinfo = cbinfo;

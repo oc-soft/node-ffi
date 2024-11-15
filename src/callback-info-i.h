@@ -4,6 +4,8 @@
 #include <memory>
 #include <ffi.h>
 
+#ifdef __cplusplus
+
 namespace Nan {
 class Callback;
 }
@@ -104,4 +106,5 @@ public:
   Free(callback_info* info);
 };
 
+#endif
 #endif

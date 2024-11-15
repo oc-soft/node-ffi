@@ -1,14 +1,18 @@
+#include "node-ffi/callback-info.h"
 // https://raw.githubusercontent.com/ghostoy/node-ffi/master/src/callback_info.cc
 // Reference:
 //   http://www.bufferoverflow.ch/cgi-bin/dwww/usr/share/doc/libffi5/html/The-Closure-API.html
 
 #include <node.h>
-#include <node_buffer.h>
-#include <node_version.h>
-#include "ffi.h"
-#include "callback-info.h"
+#include <string>
+#include "node-ffi.h"
 #include "callback-info-i.h"
 #include "code-object.h"
+#include "threaded_callback_invokation.h"
+#include "node-ffi/wrap-pointer.h"
+
+using namespace v8;
+using namespace node;
 
 #if !(NODE_VERSION_AT_LEAST(0, 11, 15))
   #ifdef WIN32
@@ -23,6 +27,7 @@
   #endif
 #endif
 
+namespace node_ffi {
 #ifdef WIN32
 DWORD CallbackInfo::g_threadID;
 #else
@@ -120,14 +125,14 @@ void CallbackInfo::WatcherCallback(uv_async_t *w, int revents) {
 
 NAN_METHOD(CallbackInfo::Callback) {
   if (info.Length() != 5) {
-    return THROW_ERROR_EXCEPTION("Not enough arguments.");
+    return Nan::ThrowError("Not enough arguments.");
   }
 
   // Args: cif pointer, JS function
   // TODO: Check args
   v8::Isolate *isolate = info.GetIsolate();
   v8::Local<Context> ctx = isolate->GetCurrentContext();
-  ffi_cif *cif = (ffi_cif *)UnwrapPointer(isolate, info[0]);
+  ffi_cif *cif = (ffi_cif *)node_ffi::UnwrapPointer(isolate, info[0]);
 
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
@@ -151,7 +156,7 @@ NAN_METHOD(CallbackInfo::Callback) {
     new (std::nothrow) Nan::Callback(callback));
 
   if (!cbBuf || !function || !errorFunction) {
-    return THROW_ERROR_EXCEPTION("ffi_closure_alloc() Returned Error");
+    return Nan::ThrowError("ffi_closure_alloc() Returned Error");
   }
   callback_info* cbInfo;
   cbInfo = new (cbBuf) callback_info();
@@ -176,10 +181,13 @@ NAN_METHOD(CallbackInfo::Callback) {
 
   if (status != FFI_OK) {
     callback_info::Free(cbInfo);
-    return THROW_ERROR_EXCEPTION_WITH_STATUS_CODE("ffi_prep_closure() Returned Error", status);
+    std::string strbuf("ffi_prep_closure() Returned Error "); 
+    strbuf += status;
+    Nan::ThrowError(strbuf.c_str());
+    return;
   }
 
-  Local<Object> codeBuff = Local<Object>::Cast(WrapPointer(isolate,
+  Local<Object> codeBuff = Local<Object>::Cast(node_ffi::WrapPointer(isolate,
     (char*)code, sizeof(void*), true)); 
    
   ffi::CodeObject* codeObj = new (std::nothrow) ffi::CodeObject(cbInfo);
@@ -282,4 +290,6 @@ void CallbackInfo::Initialize(Handle<Object> target) {
 #else
   uv_unref(uv_default_loop());
 #endif
+}
+
 }
