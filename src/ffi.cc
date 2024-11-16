@@ -2,21 +2,10 @@
 #include <errno.h>
 #include "node-ffi.h"
 #include "objc-object-wrap.h"
-#include "node-ffi/callback-info.h"
 #include "node-ffi/wrap-pointer.h"
 #include "node-ffi/async-call-params.h"
 #include "node-ffi/ffi-config.h"
 
-#ifdef WIN32
-#include "win32-dlfcn.h"
-#else
-#include <dlfcn.h>
-#endif
-
-
-int node_ffi_errno() {
-    return errno;
-}
 
 using namespace node;
 using namespace v8;
@@ -28,23 +17,6 @@ using namespace v8;
 
 namespace node_ffi {
 
-///////////////
-
-NAN_MODULE_INIT(FFI::InitializeStaticFunctions) {
-  Local<Object> o = Nan::New<Object>();
-  v8::Isolate *isolate = v8::Isolate::GetCurrent();
-  v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
- 
-  // dl functions used by the DynamicLibrary JS class
-  o->Set(ctx, Nan::New<String>("dlopen").ToLocalChecked(),  node_ffi::WrapPointer(isolate, (char *)dlopen, true));
-  o->Set(ctx, Nan::New<String>("dlclose").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)dlclose, true));
-  o->Set(ctx, Nan::New<String>("dlsym").ToLocalChecked(),   node_ffi::WrapPointer(isolate, (char *)dlsym, true));
-  o->Set(ctx, Nan::New<String>("dlerror").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)dlerror, true));
-
-  o->Set(ctx, Nan::New<String>("_errno").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)node_ffi_errno, true));
-
-  target->Set(ctx, Nan::New<String>("StaticFunctions").ToLocalChecked(), o);
-}
 
 ///////////////
 
@@ -114,43 +86,6 @@ NAN_MODULE_INIT(FFI::InitializeBindings) {
   SET_ENUM_VALUE(FFI_UNIX64);
 #endif
 
-  /* flags for dlopen() */
-#ifdef RTLD_LAZY
-  SET_ENUM_VALUE(RTLD_LAZY);
-#endif
-#ifdef RTLD_NOW
-  SET_ENUM_VALUE(RTLD_NOW);
-#endif
-#ifdef RTLD_LOCAL
-  SET_ENUM_VALUE(RTLD_LOCAL);
-#endif
-#ifdef RTLD_GLOBAL
-  SET_ENUM_VALUE(RTLD_GLOBAL);
-#endif
-#ifdef RTLD_NOLOAD
-  SET_ENUM_VALUE(RTLD_NOLOAD);
-#endif
-#ifdef RTLD_NODELETE
-  SET_ENUM_VALUE(RTLD_NODELETE);
-#endif
-#ifdef RTLD_FIRST
-  SET_ENUM_VALUE(RTLD_FIRST);
-#endif
-
-  /* flags for dlsym() */
-#ifdef RTLD_NEXT
-  Nan::ForceSet(target,Nan::New<String>("RTLD_NEXT").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)RTLD_NEXT, true), static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-#endif
-#ifdef RTLD_DEFAULT
-  Nan::ForceSet(target,Nan::New<String>("RTLD_DEFAULT").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)RTLD_DEFAULT, true), static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-#endif
-#ifdef RTLD_SELF
-  Nan::ForceSet(target,Nan::New<String>("RTLD_SELF").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)RTLD_SELF, true), static_cast<PropertyAttribute>(ReadOnly|DontDelete));
-#endif
-#ifdef RTLD_MAIN_ONLY
-  Nan::ForceSet(target,Nan::New<String>("RTLD_MAIN_ONLY").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)RTLD_MAIN_ONLY, true), static_cast<PropertyAttribute>(ReadOnly|DontDelete));
-#endif
-
   Nan::ForceSet(target,Nan::New<String>("FFI_ARG_SIZE").ToLocalChecked(), Nan::New<Uint32>((uint32_t)sizeof(ffi_arg)), static_cast<PropertyAttribute>(ReadOnly|DontDelete));
   Nan::ForceSet(target,Nan::New<String>("FFI_SARG_SIZE").ToLocalChecked(), Nan::New<Uint32>((uint32_t)sizeof(ffi_sarg)), static_cast<PropertyAttribute>(ReadOnly | DontDelete));
   Nan::ForceSet(target,Nan::New<String>("FFI_TYPE_SIZE").ToLocalChecked(), Nan::New<Uint32>((uint32_t)sizeof(ffi_type)), static_cast<PropertyAttribute>(ReadOnly | DontDelete));
@@ -162,31 +97,6 @@ NAN_MODULE_INIT(FFI::InitializeBindings) {
 #endif
   Nan::ForceSet(target,Nan::New<String>("HAS_OBJC").ToLocalChecked(), Nan::New<Boolean>(hasObjc), static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  Local<Object> ftmap = Nan::New<Object>();
-  ftmap->Set(ctx, Nan::New<String>("void").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_void, true));
-  ftmap->Set(ctx, Nan::New<String>("uint8").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uint8, true));
-  ftmap->Set(ctx, Nan::New<String>("int8").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sint8, true));
-  ftmap->Set(ctx, Nan::New<String>("uint16").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uint16, true));
-  ftmap->Set(ctx, Nan::New<String>("int16").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sint16, true));
-  ftmap->Set(ctx, Nan::New<String>("uint32").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uint32, true));
-  ftmap->Set(ctx, Nan::New<String>("int32").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sint32, true));
-  ftmap->Set(ctx, Nan::New<String>("uint64").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uint64, true));
-  ftmap->Set(ctx, Nan::New<String>("int64").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sint64, true));
-  ftmap->Set(ctx, Nan::New<String>("uchar").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uchar, true));
-  ftmap->Set(ctx, Nan::New<String>("char").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_schar, true));
-  ftmap->Set(ctx, Nan::New<String>("ushort").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_ushort, true));
-  ftmap->Set(ctx, Nan::New<String>("short").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sshort, true));
-  ftmap->Set(ctx, Nan::New<String>("uint").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_uint, true));
-  ftmap->Set(ctx, Nan::New<String>("int").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_sint, true));
-  ftmap->Set(ctx, Nan::New<String>("float").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_float, true));
-  ftmap->Set(ctx, Nan::New<String>("double").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_double, true));
-  ftmap->Set(ctx, Nan::New<String>("pointer").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_pointer, true));
-  // NOTE: "long" and "ulong" get handled in JS-land
-  // Let libffi handle "long long"
-  ftmap->Set(ctx, Nan::New<String>("ulonglong").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_ulong, true));
-  ftmap->Set(ctx, Nan::New<String>("longlong").ToLocalChecked(), node_ffi::WrapPointer(isolate, (char *)&ffi_type_slong, true));
-
-  target->Set(ctx, Nan::New<String>("FFI_TYPES").ToLocalChecked(), ftmap);
 }
 
 /*

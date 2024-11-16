@@ -1,4 +1,4 @@
-#include "node-ffi/callback-info.h"
+#include "node-ffi/callback.h"
 // https://raw.githubusercontent.com/ghostoy/node-ffi/master/src/callback_info.cc
 // Reference:
 //   http://www.bufferoverflow.ch/cgi-bin/dwww/usr/share/doc/libffi5/html/The-Closure-API.html
@@ -29,19 +29,19 @@ using namespace node;
 
 namespace node_ffi {
 #ifdef WIN32
-DWORD CallbackInfo::g_threadID;
+DWORD Callback::g_threadID;
 #else
-uv_thread_t CallbackInfo::g_mainthread;
+uv_thread_t Callback::g_mainthread;
 #endif
-uv_mutex_t    CallbackInfo::g_queue_mutex;
-std::queue<ThreadedCallbackInvokation *> CallbackInfo::g_queue;
-uv_async_t         CallbackInfo::g_async;
+uv_mutex_t    Callback::g_queue_mutex;
+std::queue<ThreadedCallbackInvokation *> Callback::g_queue;
+uv_async_t         Callback::g_async;
 
 /*
  * Invokes the JS callback function.
  */
 
-void CallbackInfo::DispatchToV8(callback_info *info, void *retval, void **parameters, bool dispatched) {
+void Callback::DispatchToV8(callback_info *info, void *retval, void **parameters, bool dispatched) {
   Nan::HandleScope scope;
 
   static const char* errorMessage = "ffi fatal: callback has been garbage collected!";
@@ -104,7 +104,7 @@ void CallbackInfo::DispatchToV8(callback_info *info, void *retval, void **parame
   }
 }
 
-void CallbackInfo::WatcherCallback(uv_async_t *w, int revents) {
+void Callback::WatcherCallback(uv_async_t *w, int revents) {
   uv_mutex_lock(&g_queue_mutex);
 
   while (!g_queue.empty()) {
@@ -123,7 +123,7 @@ void CallbackInfo::WatcherCallback(uv_async_t *w, int revents) {
  * executable C function pointer as a node Buffer instance.
  */
 
-NAN_METHOD(CallbackInfo::Callback) {
+NAN_METHOD(Callback::NewCallback) {
   if (info.Length() != 5) {
     return Nan::ThrowError("Not enough arguments.");
   }
@@ -169,7 +169,7 @@ NAN_METHOD(CallbackInfo::Callback) {
   // (not sure if this is actually needed...)
   cbInfo->SetCode(code);
 
-  //CallbackInfo *self = new CallbackInfo(callback, closure, code, argc);
+  //Callback *self = new Callback(callback, closure, code, argc);
 
   status = ffi_prep_closure_loc(
     cbInfo,
@@ -216,7 +216,7 @@ NAN_METHOD(CallbackInfo::Callback) {
  * executed.
  */
 
-void CallbackInfo::Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data) {
+void Callback::Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data) {
   callback_info *info = reinterpret_cast<callback_info *>(user_data);
 
   // are we executing from another thread?
@@ -262,17 +262,17 @@ void CallbackInfo::Invoke(ffi_cif *cif, void *retval, void **parameters, void *u
  * Init stuff.
  */
 
-void CallbackInfo::Initialize(Handle<Object> target) {
+void Callback::Initialize(Handle<Object> target) {
   Nan::HandleScope scope;
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
   v8::Isolate *isolate = v8::Isolate::GetCurrent();
   v8::Local<Context> ctx = isolate->GetCurrentContext();
   Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(Callback)->GetFunction(ctx).ToLocalChecked());
+    Nan::New<FunctionTemplate>(NewCallback)->GetFunction(ctx).ToLocalChecked());
 #else
   Nan::Set(target, Nan::New<String>("Callback").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(Callback)->GetFunction());
+    Nan::New<FunctionTemplate>(NewCallback)->GetFunction());
 #endif
 
   // initialize our threaded invokation stuff
@@ -281,7 +281,7 @@ void CallbackInfo::Initialize(Handle<Object> target) {
 #else
   g_mainthread = (uv_thread_t) uv_thread_self();
 #endif
-  uv_async_init(uv_default_loop(), &g_async, (uv_async_cb) CallbackInfo::WatcherCallback);
+  uv_async_init(uv_default_loop(), &g_async, (uv_async_cb) Callback::WatcherCallback);
   uv_mutex_init(&g_queue_mutex);
 
   // allow the event loop to exit while this is running

@@ -10,7 +10,6 @@ namespace node_ffi {
 
 class FFI {
   public:
-    static NAN_MODULE_INIT(InitializeStaticFunctions);
     static NAN_MODULE_INIT(InitializeBindings);
 
   protected:

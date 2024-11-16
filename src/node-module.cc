@@ -1,14 +1,19 @@
 #include <node.h>
 #include <nan.h>
 #include "node-ffi.h"
-#include "node-ffi/callback-info.h"
+#include "node-ffi/dl.h"
+#include "node-ffi/errno.h"
+#include "node-ffi/callback.h"
+#include "node-ffi/types.h"
 
 NAN_MODULE_INIT(init) {
-  Nan::HandleScope scope;
+    Nan::HandleScope scope;
   
-  node_ffi::FFI::InitializeBindings(target);
-  node_ffi::FFI::InitializeStaticFunctions(target);
-  node_ffi::CallbackInfo::Initialize(target);
+    node_ffi::FFI::InitializeBindings(target);
+    node_ffi::Dl::Register(target);
+    node_ffi::Errno::Register(target);
+    node_ffi::Types::Register(target);
+    node_ffi::Callback::Initialize(target);
 }
 
 NODE_MODULE(ffi_bindings, init)

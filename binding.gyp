@@ -5,13 +5,16 @@
       'sources': [
         'src/node-module.cc'
         , 'src/ffi.cc'
-        , 'src/callback-info.cc'
+        , 'src/callback.cc'
         , 'src/threaded_callback_invokation.cc'
         , 'src/callback-info-i.cc'
         , 'src/code-object.cc'
         , 'src/async-call-params.cc'
         , 'src/objc-object-wrap.cc'
         , 'src/wrap-pointer.cc'
+        , 'src/dl.cc'
+        , 'src/errno.cc'
+        , 'src/types.cc'
         , 'src/ffi-config.cc'
       ],
       'include_dirs': [

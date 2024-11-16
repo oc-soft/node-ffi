@@ -1,5 +1,5 @@
-#ifndef __CALLBACK_INFO_H__
-#define __CALLBACK_INFO_H__
+#ifndef __NODE_FFI_CALLBACK_H__
+#define __NODE_FFI_CALLBACK_H__
 #include <queue>
 #include <ffi.h>
 #include <uv.h>
@@ -12,7 +12,7 @@ class ThreadedCallbackInvokation;
 class callback_info;
 
 namespace node_ffi {
-class CallbackInfo {
+class Callback {
   public:
     static NAN_MODULE_INIT(Initialize);
     static void WatcherCallback(uv_async_t *w, int revents);
@@ -20,7 +20,7 @@ class CallbackInfo {
   protected:
     static void DispatchToV8(callback_info *self, void *retval, void **parameters, bool dispatched = false);
     static void Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data);
-    static NAN_METHOD(Callback);
+    static NAN_METHOD(NewCallback);
 
   private:
 #ifdef WIN32
