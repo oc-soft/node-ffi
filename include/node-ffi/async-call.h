@@ -71,7 +71,12 @@ class AsyncCall {
     std::unique_ptr<Nan::Callback>&
     GetCallback();
 
-  private:
+    /**
+     * register aynchronous functions
+     */
+    static NAN_MODULE_INIT(Register);
+
+private:
 #if __OBJC__ || __OBJC2__
     id err = Nil;
 #endif
@@ -80,6 +85,20 @@ class AsyncCall {
     void *res = nullptr;
     void **argv = nullptr;
     std::unique_ptr<Nan::Callback> callback;
+
+    /**
+     * asynchronous function entry point for javascript
+     */
+    static NAN_METHOD(FFICallAsync);
+    /**
+     * worker callback
+     */
+    static void AsyncFFICall(uv_work_t *req);
+    /**
+     * clean up function
+     */
+    static void FinishAsyncFFICall(uv_work_t *req);
+
 };
 
 }
