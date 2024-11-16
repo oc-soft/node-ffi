@@ -1,7 +1,7 @@
 #include "code-object.h"
 #include "callback-info-i.h"
 
-namespace ffi {
+namespace node_ffi {
 
 /**
  * constructor

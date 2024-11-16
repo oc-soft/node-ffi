@@ -12,8 +12,11 @@ class ThreadedCallbackInvokation;
 class callback_info;
 
 namespace node_ffi {
+class AsyncCall;
+
 class Callback {
-  public:
+    friend class AsyncCall;
+public:
     static NAN_MODULE_INIT(Initialize);
     static void WatcherCallback(uv_async_t *w, int revents);
 
@@ -31,6 +34,15 @@ class Callback {
     static uv_mutex_t    g_queue_mutex;
     static std::queue<ThreadedCallbackInvokation *> g_queue;
     static uv_async_t         g_async;
+    /**
+     * decode callback_info from code buffer object.
+     */
+    static callback_info*
+    DecodeCallbackInfo(
+        v8::Isolate* isolate,
+        v8::Local<v8::Object>& codeBuffer);
+
+
 };
 
 }

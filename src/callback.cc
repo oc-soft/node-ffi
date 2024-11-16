@@ -118,6 +118,33 @@ void Callback::WatcherCallback(uv_async_t *w, int revents) {
   uv_mutex_unlock(&g_queue_mutex);
 }
 
+/**
+ * decode callback_info from code buffer object.
+ */
+callback_info*
+Callback::DecodeCallbackInfo(
+    v8::Isolate* isolate,
+    v8::Local<v8::Object>& codeBuffer)
+{
+    callback_info* result = nullptr;
+    Local<Context> context = isolate->GetCurrentContext();
+    v8::MaybeLocal<v8::Value> codeObjValue = codeBuffer->Get(context, 
+        String::NewFromUtf8(isolate, "code").ToLocalChecked());
+
+    if (!codeObjValue.IsEmpty()) {
+        v8::Local<v8::Value> codeObjValue0 = codeObjValue.ToLocalChecked(); 
+        if (codeObjValue0->IsObject()) {
+            node_ffi::CodeObject* codeObj0; 
+            v8::Local<v8::Object> codeObj = codeObjValue0->ToObject(
+                context).ToLocalChecked();
+            codeObj0 = Nan::ObjectWrap::Unwrap<node_ffi::CodeObject>(codeObj);
+            result = codeObj0->callbackInfo;
+        }
+    }
+    return result;
+}
+
+
 /*
  * Creates an `ffi_closure *` pointer around the given JS function. Returns the
  * executable C function pointer as a node Buffer instance.
@@ -190,7 +217,9 @@ NAN_METHOD(Callback::NewCallback) {
   Local<Object> codeBuff = Local<Object>::Cast(node_ffi::WrapPointer(isolate,
     (char*)code, sizeof(void*), true)); 
    
-  ffi::CodeObject* codeObj = new (std::nothrow) ffi::CodeObject(cbInfo);
+  node_ffi::CodeObject* codeObj;
+  codeObj = new (std::nothrow) node_ffi::CodeObject(
+        cbInfo);
   if (codeObj) {
     Local<ObjectTemplate> jsCodeObjTemp = v8::ObjectTemplate::New(isolate);
     jsCodeObjTemp->SetInternalFieldCount(1);

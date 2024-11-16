@@ -1,17 +1,18 @@
 #ifndef __CODE_OBJECT_H__
 #define __CODE_OBJECT_H__
 #include "nan.h"
-
+#ifdef __cplusplus
 class callback_info;
 
-namespace ffi {
+namespace node_ffi {
 
-
+class Callback;
 /**
  * It keeps ffi callback info
  */
-class CodeObject : Nan::ObjectWrap
+class CodeObject : public Nan::ObjectWrap
 {
+    friend class Callback;
     /**
      * callback info
      */
@@ -35,5 +36,6 @@ public:
     void AttachTo(v8::Local<v8::Object>& value);
 };
 }
+#endif
 // vi: se ts=4 sw=4 et:
 #endif

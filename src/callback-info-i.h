@@ -9,6 +9,8 @@
 namespace Nan {
 class Callback;
 }
+
+
 /*
  * One of these structs gets created for each `ffi.Callback()` invokation in
  * JavaScript-land. It contains all the necessary information when invoking the
