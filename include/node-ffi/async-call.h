@@ -1,5 +1,5 @@
-#ifndef __NODE_FFI_ASYNC_CALL_PARAMS_H__
-#define __NODE_FFI_ASYNC_CALL_PARAMS_H__
+#ifndef __NODE_FFI_ASYNC_CALL_H__
+#define __NODE_FFI_ASYNC_CALL_H__
 
 #include <memory>
 #include <ffi.h>
@@ -11,16 +11,16 @@
 
 
 #ifdef __cplusplus
-
+namespace node_ffi {
 /*
  * Class used to store stuff during async ffi_call() invokations.
  */
 
-class AsyncCallParams {
+class AsyncCall {
   public:
-    AsyncCallParams() = default;
+    AsyncCall() = default;
 
-    ~AsyncCallParams();
+    ~AsyncCall();
 #if __OBJC__ || __OBJC2__
     bool
     HasErr() const;
@@ -82,5 +82,6 @@ class AsyncCallParams {
     std::unique_ptr<Nan::Callback> callback;
 };
 
+}
 #endif
 #endif

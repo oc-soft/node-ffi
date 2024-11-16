@@ -9,7 +9,7 @@
         , 'src/threaded_callback_invokation.cc'
         , 'src/callback-info-i.cc'
         , 'src/code-object.cc'
-        , 'src/async-call-params.cc'
+        , 'src/async-call.cc'
         , 'src/objc-object-wrap.cc'
         , 'src/wrap-pointer.cc'
         , 'src/dl.cc'

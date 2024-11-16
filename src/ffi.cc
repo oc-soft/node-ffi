@@ -3,7 +3,7 @@
 #include "node-ffi.h"
 #include "objc-object-wrap.h"
 #include "node-ffi/wrap-pointer.h"
-#include "node-ffi/async-call-params.h"
+#include "node-ffi/async-call.h"
 #include "node-ffi/ffi-config.h"
 
 
@@ -258,7 +258,7 @@ NAN_METHOD(FFI::FFICallAsync) {
     return THROW_ERROR_EXCEPTION("ffi_call_async() requires 5 arguments!");
   }
 
-  AsyncCallParams *p = new (std::nothrow) AsyncCallParams();
+  AsyncCall *p = new (std::nothrow) AsyncCall();
   uv_work_t *req = new (std::nothrow) uv_work_t;
 
   std::unique_ptr<Nan::Callback> callback;
@@ -298,7 +298,7 @@ NAN_METHOD(FFI::FFICallAsync) {
  * Called on the thread pool.
  */
 void FFI::AsyncFFICall(uv_work_t *req) {
-  AsyncCallParams *p = reinterpret_cast<AsyncCallParams *>(req->data);
+  AsyncCall *p = reinterpret_cast<AsyncCall *>(req->data);
 
 #if __OBJC__ || __OBJC2__
   @try {
@@ -324,7 +324,7 @@ void FFI::AsyncFFICall(uv_work_t *req) {
 void FFI::FinishAsyncFFICall(uv_work_t *req) {
   Nan::HandleScope scope;
 
-  AsyncCallParams *p = reinterpret_cast<AsyncCallParams *>(req->data);
+  AsyncCall *p = reinterpret_cast<AsyncCall *>(req->data);
 
   Local<Value> argv[] = { Nan::Null() };
 #if __OBJC__ || __OBJC2__

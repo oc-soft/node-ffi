@@ -1,10 +1,12 @@
-#include "node-ffi/async-call-params.h"
+#include "node-ffi/async-call.h"
 
 #if __OBJC__ || __OBJC2__
 #include "objc-object-wrap.h"
 #endif
 
-AsyncCallParams::~AsyncCallParams()
+namespace node_ffi {
+
+AsyncCall::~AsyncCall()
 {
 #if __OBJC__ || __OBJC2__
     SetErr(Nil);
@@ -14,19 +16,19 @@ AsyncCallParams::~AsyncCallParams()
 #if __OBJC__ || __OBJC2__
 
 bool
-AsyncCallParams::HasErr() const
+AsyncCall::HasErr() const
 {
     return GetErrRef() != Nil;
 }
 
 id
-AsyncCallParams::GetErrRef() const
+AsyncCall::GetErrRef() const
 {
     return err;
 }
 
 void
-AsyncCallParams::SetErr(
+AsyncCall::SetErr(
     id err)
 {
     if (err) {
@@ -39,7 +41,7 @@ AsyncCallParams::SetErr(
 }
 
 MaybeLocal<v8::Object>
-AsyncCallParams::GetErr(
+AsyncCall::GetErr(
     Isolate* isolate)
 {
     MaybeLocal<v8::Object> result;
@@ -51,59 +53,59 @@ AsyncCallParams::GetErr(
 #endif
 
 void
-AsyncCallParams::SetCif(
+AsyncCall::SetCif(
     ffi_cif* cif)
 {
     this->cif = cif;
 }
 
 ffi_cif*
-AsyncCallParams::GetCif() const
+AsyncCall::GetCif() const
 {
     return cif;
 }
 
 void
-(*AsyncCallParams::GetFn() const)(void)
+(*AsyncCall::GetFn() const)(void)
 {
     return fn;
 }
 
 void
-AsyncCallParams::SetFn(
+AsyncCall::SetFn(
     void (*fn)(void))
 {
     this->fn = fn;
 }
 
 void*
-AsyncCallParams::GetRes() const
+AsyncCall::GetRes() const
 {
     return res;
 }
 
 void
-AsyncCallParams::SetRes(
+AsyncCall::SetRes(
     void* res)
 {
     this->res = res;
 }
 
 void**
-AsyncCallParams::GetArgv() const
+AsyncCall::GetArgv() const
 {
     return argv;
 }
 
 void
-AsyncCallParams::SetArgv(
+AsyncCall::SetArgv(
     void** argv)
 {
     this->argv = argv;
 }
 
 void
-AsyncCallParams::SetCallback(
+AsyncCall::SetCallback(
     std::unique_ptr<Nan::Callback>& callback)
 {
     std::unique_ptr<Nan::Callback> tmpValue;
@@ -112,10 +114,10 @@ AsyncCallParams::SetCallback(
 }
 
 std::unique_ptr<Nan::Callback>&
-AsyncCallParams::GetCallback() 
+AsyncCall::GetCallback() 
 {
     return callback;
 }
 
-
+}
 // vi: se ts=4 sw=4 et:
