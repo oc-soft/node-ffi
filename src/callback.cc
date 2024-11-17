@@ -148,25 +148,36 @@ Callback::DecodeCallbackInfo(
  */
 
 NAN_METHOD(Callback::NewCallback) {
-    if (info.Length() < 5) {
-        return Nan::ThrowError("Not enough arguments.");
-    }
 
     // Args: cif pointer, JS function
     // TODO: Check args
     v8::Isolate *isolate = info.GetIsolate();
     v8::Local<Context> ctx = isolate->GetCurrentContext();
-    ffi_cif *cif = (ffi_cif *)node_ffi::UnwrapPointer(isolate, info[0]);
+
     size_t resultSize;
+    int state;
     int argc;
+    state = 0;
+    Nan::HandleScope scope;
+    if (info.Length() < 5) {
+        state = -1;
+        Nan::ThrowError("Not enough arguments.");
+    }
+    ffi_cif *cif = nullptr;
+    if (state == 0) {
+        cif = reinterpret_cast<ffi_cif *>(
+            node_ffi::UnwrapPointer(isolate, info[0])); 
+    }
+    if (state == 0) {
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
-    resultSize = info[1]->Int32Value(ctx).FromJust();
-    argc = info[2]->Int32Value(ctx).FromJust();
+        resultSize = info[1]->Int32Value(ctx).FromJust();
+        argc = info[2]->Int32Value(ctx).FromJust();
 #else 
-    resultSize = info[1]->Int32Value();
-    argc = info[2]->Int32Value();
+        resultSize = info[1]->Int32Value();
+        argc = info[2]->Int32Value();
 #endif
+    }
     Local<Function> errorReportCallback;
     if (info[3]->IsFunction()) { 
         errorReportCallback = Local<Function>::Cast(info[3]);
@@ -175,68 +186,84 @@ NAN_METHOD(Callback::NewCallback) {
     if (info[4]->IsFunction()) {
         callback = Local<Function>::Cast(info[4]);
     }
-    ffi_status status;
+    callback_info* cbInfo;
     void* code;
     void* cbBuf;
-    cbBuf = ffi_closure_alloc(sizeof(callback_info), &code);
+    cbBuf = nullptr;
+    cbInfo = nullptr;
+    if (state == 0) {
+        cbBuf = ffi_closure_alloc(sizeof(callback_info), &code);
+        if (!cbBuf) {
+            state = -1;
+            Nan::ThrowError("ffi_closure_alloc() Returned Error");
+        }
+    }
+    if (state == 0) {
+        cbInfo = new (cbBuf) callback_info();
+        state = cbInfo ? 0 : -1;
+    }
+    if (state == 0) {
+        cbInfo->SetResultSize(resultSize);
+        cbInfo->SetArgc(argc);
+        cbInfo->SetFunction(isolate, callback);
+        cbInfo->SetErrorFunction(isolate, errorReportCallback);
+        // store a reference to the callback function pointer
+        // (not sure if this is actually needed...)
+        cbInfo->SetCode(code);
+    }
 
+    if (state == 0) {
+        ffi_status status;
+        status = ffi_prep_closure_loc(
+            cbInfo,
+            cif,
+            Invoke,
+            cbInfo,
+            code);
+        state = status == FFI_OK ? 0 : -1;
+        if (state) {
+            std::string strbuf("ffi_prep_closure() Returned Error "); 
+            strbuf += status;
+            Nan::ThrowError(strbuf.c_str());
+        }
+    }
+    Local<Object> codeBuff;
+    node_ffi::CodeObject* codeObj;
+    codeObj = nullptr;
+    if (state == 0) {
+        codeBuff = Local<Object>::Cast(
+            node_ffi::WrapPointer(isolate,
+            reinterpret_cast<char*>(code), sizeof(void*), true)); 
+        codeObj = new (std::nothrow) node_ffi::CodeObject(cbInfo);
+        state = codeObj ? 0 : -1;
+        if (state) {
+            Nan::ThrowError("out of memory");
+        }
+    }
+    if (state == 0) {
+        Local<ObjectTemplate> jsCodeObjTemp = v8::ObjectTemplate::New(isolate);
+        jsCodeObjTemp->SetInternalFieldCount(1);
+        Local<Object> jsCodeObj = jsCodeObjTemp->NewInstance(
+            isolate->GetCurrentContext()).ToLocalChecked();
+        codeObj->AttachTo(jsCodeObj);
+        codeBuff->DefineOwnProperty(
+            isolate->GetCurrentContext(),
+            String::NewFromUtf8(isolate, "code").ToLocalChecked(),
+            jsCodeObj,
+            static_cast<PropertyAttribute>(
+                PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
+        info.GetReturnValue().Set(codeBuff);
+        codeObj = nullptr;
+        cbInfo = nullptr;
+    }
+    if (codeObj) {
+        delete codeObj;
+    }
 
-  if (!cbBuf) {
-    return Nan::ThrowError("ffi_closure_alloc() Returned Error");
-  }
-  callback_info* cbInfo;
-  cbInfo = new (cbBuf) callback_info();
-  cbInfo->SetResultSize(resultSize);
-  cbInfo->SetArgc(argc);
-    cbInfo->SetFunction(isolate, callback);
-    cbInfo->SetErrorFunction(isolate, errorReportCallback);
+    if (cbInfo) {
+        callback_info::Free(cbInfo);
+    }
 
-  // store a reference to the callback function pointer
-  // (not sure if this is actually needed...)
-  cbInfo->SetCode(code);
-
-  //Callback *self = new Callback(callback, closure, code, argc);
-
-  status = ffi_prep_closure_loc(
-    cbInfo,
-    cif,
-    Invoke,
-    cbInfo,
-    code
-  );
-
-  if (status != FFI_OK) {
-    callback_info::Free(cbInfo);
-    std::string strbuf("ffi_prep_closure() Returned Error "); 
-    strbuf += status;
-    Nan::ThrowError(strbuf.c_str());
-    return;
-  }
-
-  Local<Object> codeBuff = Local<Object>::Cast(node_ffi::WrapPointer(isolate,
-    (char*)code, sizeof(void*), true)); 
-   
-  node_ffi::CodeObject* codeObj;
-  codeObj = new (std::nothrow) node_ffi::CodeObject(
-        cbInfo);
-  if (codeObj) {
-    Local<ObjectTemplate> jsCodeObjTemp = v8::ObjectTemplate::New(isolate);
-    jsCodeObjTemp->SetInternalFieldCount(1);
-    Local<Object> jsCodeObj = jsCodeObjTemp->NewInstance(
-      isolate->GetCurrentContext()).ToLocalChecked();
-    codeObj->AttachTo(jsCodeObj);
-    codeBuff->DefineOwnProperty(
-        isolate->GetCurrentContext(),
-        String::NewFromUtf8(isolate, "code").ToLocalChecked(),
-        jsCodeObj,
-        static_cast<PropertyAttribute>(
-           PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
-    info.GetReturnValue().Set(codeBuff);
-  } else {
-    callback_info::Free(cbInfo);
-
-    Nan::ThrowError("outof memory");
-  }
 }
 
 /*
