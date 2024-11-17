@@ -31,8 +31,6 @@ class callback_info : public ffi_closure {
      */
     v8::Global<v8::Function> jsFunction;
 
-    std::unique_ptr<Nan::Callback> errorFunction;
-    std::unique_ptr<Nan::Callback> function; 
 
     // these two are required for creating proper sized WrapPointer
     // buffer instances
@@ -112,32 +110,6 @@ public:
         v8::Isolate* isolate);
  
     /**
-     * get js callback function for reporting catched exceptions
-     */
-    const std::unique_ptr<Nan::Callback>&
-    GetErrorFunction() const; 
-
-    /**
-     * set js callback function for reporting catched exceptions
-     */
-    void 
-    SetErrorFunction(
-        std::unique_ptr<Nan::Callback>& errorFunction); 
-
-    /**
-     * get js callback function the closure represents
-     */
-    const std::unique_ptr<Nan::Callback>&
-    GetFunction() const;
-
-    /**
-     * set js callback function the closure represents
-     */
-    void 
-    SetFunction(
-        std::unique_ptr<Nan::Callback>& function); 
-
-    /**
      * get the code to call function
      */
     void*
@@ -148,7 +120,7 @@ public:
      */
     void
     SetCode(
-    void* code);
+        void* code);
 
     /**
      * free allocated object by ffi_closure_alloc
