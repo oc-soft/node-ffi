@@ -205,13 +205,13 @@ AsyncCall::RunWorker(
             jsArgv = v8::Local<v8::Object>::Cast(info[3]);
         }
     }
-    v8::Local<v8::Function> callbackFunc;
+    v8::Local<v8::Function> jsFunc;
     if (status == 0) {
         status = info[4]->IsFunction() ? 0 : -1;
         if (status) {
             Nan::ThrowError("The 4th argument must be function");
         } else { 
-            callbackFunc = v8::Local<v8::Function>::Cast(info[4]);
+            jsFunc = v8::Local<v8::Function>::Cast(info[4]);
         }
     }
     if (status == 0) {
@@ -223,11 +223,11 @@ AsyncCall::RunWorker(
         p->SetArgv(reinterpret_cast<void**>(UnwrapPointer(isolate, info[3])));
         p->SetResult(isolate, jsResult);
         p->SetArgv(isolate, jsArgv);
-        p->SetCallback(isolate, callbackFunc);
+        p->SetCallback(isolate, jsFunc);
         req->data = p;
+        uv_queue_work(Nan::GetCurrentEventLoop(), req, Run, FinishedRunning);
         req = nullptr;
         p = nullptr;
-        uv_queue_work(Nan::GetCurrentEventLoop(), req, Run, FinishedRunning);
     }
     info.GetReturnValue().SetUndefined();    
     if (p) {
@@ -300,47 +300,31 @@ AsyncCall::IsJsCodeFunction(
  * args[4] - Function - the callback function to invoke when complete
  */
 
-NAN_METHOD(AsyncCall::FFICallAsync) {
-  if (info.Length() != 5) {
-    Nan::ThrowError("ffi_call_async() requires 5 arguments!");
-    return;
-  }
-
-  AsyncCall *p = new (std::nothrow) AsyncCall();
-  uv_work_t *req = new (std::nothrow) uv_work_t;
-
-  v8::Local<v8::Function> jsFunc = v8::Local<v8::Function>::Cast(info[4]);
-  std::unique_ptr<Nan::Callback> callback;
-  callback = std::unique_ptr<Nan::Callback>(
-    new (std::nothrow) Nan::Callback(jsFunc));
-
-  if (p && req && callback) {
-    // store a persistent references to all the Buffers and the callback function
-    v8::Isolate *isolate = info.GetIsolate();
-    p->SetCif(reinterpret_cast<ffi_cif*>(node_ffi::UnwrapPointer(isolate, info[0])));
-    p->SetFn(FFI_FN(node_ffi::UnwrapPointer(isolate, info[1])));
-    p->SetRes(reinterpret_cast<void*>(node_ffi::UnwrapPointer(isolate, info[2])));
-    p->SetArgv(reinterpret_cast<void**>(node_ffi::UnwrapPointer(isolate, info[3])));
-    p->SetCallback(isolate, jsFunc);
-    p->SetCallback(callback);
-
-    req->data = p;
-
-    uv_queue_work(uv_default_loop(), req,
-      Run,
-      (uv_after_work_cb)FinishedRunning);
-
-    info.GetReturnValue().SetUndefined();
-  } else {
-    info.GetReturnValue().SetUndefined();    
-    if (p) {
-      delete p;
+NAN_METHOD(AsyncCall::Run) {
+    Nan::HandleScope scope;
+    int state;
+    state = 0;
+    if (info.Length() < 5) {
+        Nan::ThrowError("ffi_call_async() requires 5 arguments!");
+        state = -1; 
     }
-    if (req) {
-      delete req;
+    
+    v8::Local<v8::Object> codeBuff;
+    if (state == 0) {
+        if (info[1]->IsObject()) {
+            codeBuff = v8::Local<v8::Object>::Cast(info[1]);
+        } else {
+            Nan::ThrowError("2nd argumentt must be object.");
+            state = -1;
+        }
     }
-    Nan::ThrowError("out of memory");
-  }
+    if (state == 0) {
+        if (!IsJsCodeFunction(info.GetIsolate(), codeBuff)) {
+            RunWorker(info);
+        } else {
+            RunJs(info);
+        }
+    }
 }
 
 /**
@@ -363,67 +347,6 @@ AsyncCall::Run(
         p->SetErr(ex);
     }
 #endif
-}
-
-
-/*
- * Called on the thread pool.
- */
-void AsyncCall::AsyncFFICall(uv_work_t *req) {
-  AsyncCall *p = reinterpret_cast<AsyncCall *>(req->data);
-
-#if __OBJC__ || __OBJC2__
-  @try {
-#endif
-    ffi_call(
-      p->GetCif(),
-      p->GetFn(),
-      p->GetRes(),
-      p->GetArgv()
-    );
-#if __OBJC__ || __OBJC2__
-  } @catch (id ex) {
-    p->SetErr(ex);
-  }
-#endif
-}
-
-/*
- * Called after the AsyncFFICall function completes on the thread pool.
- * This gets run on the main loop thread.
- */
-
-void AsyncCall::FinishAsyncFFICall(uv_work_t *req) {
-  Nan::HandleScope scope;
-
-  AsyncCall *p = reinterpret_cast<AsyncCall *>(req->data);
-
-  v8::Local<v8::Value> argv[] = { Nan::Null() };
-#if __OBJC__ || __OBJC2__
-  if (p->HasErr()) {
-    v8::Isolate* isolate = Isolate::GetCurrent();
-    // an Objective-C error was thrown
-    argv[0] = p->GetErr(isolate).LocalChecked();
-  }
-#endif
-  Nan::TryCatch try_catch;
-
-  // invoke the registered callback function
-  p->GetCallback()->Call(1, argv);
-
-  // dispose of our persistent handle to the callback function
-
-  // free up our memory (allocated in FFICallAsync)
-  delete p;
-  delete req;
-
-  if (try_catch.HasCaught()) {
-#if NODE_VERSION_AT_LEAST(0, 12, 0)
-    Nan::FatalException(try_catch);
-#else
-    FatalException(try_catch);
-#endif
-  }
 }
 
 /**
@@ -490,7 +413,7 @@ NAN_MODULE_INIT(AsyncCall::Register)
     Nan::Set(target,
         Nan::New<v8::String>("ffi_call_async").ToLocalChecked(),
         Nan::New<v8::FunctionTemplate>(
-            FFICallAsync)->GetFunction(ctx).ToLocalChecked());
+            Run)->GetFunction(ctx).ToLocalChecked());
 
 }
 

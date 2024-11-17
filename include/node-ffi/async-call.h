@@ -124,19 +124,11 @@ private:
     /**
      * asynchronous function entry point for javascript
      */
-    static NAN_METHOD(FFICallAsync);
+    static NAN_METHOD(Run);
     /**
      * worker callback
      */
     static void Run(uv_work_t *req);
-    /**
-     * worker callback
-     */
-    static void AsyncFFICall(uv_work_t *req);
-    /**
-     * clean up function
-     */
-    static void FinishAsyncFFICall(uv_work_t *req);
 
     /**
      * You get true the codeBuffer is javascript code
