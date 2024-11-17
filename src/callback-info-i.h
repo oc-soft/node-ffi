@@ -3,12 +3,9 @@
 
 #include <memory>
 #include <ffi.h>
+#include <nan.h>
 
 #ifdef __cplusplus
-
-namespace Nan {
-class Callback;
-}
 
 
 /*
@@ -19,93 +16,162 @@ class Callback;
  */
 
 class callback_info : public ffi_closure {
-  void *code;                    // the executable function pointer
-  std::unique_ptr<Nan::Callback> errorFunction;    // JS callback function for reporting catched exceptions for the process' event loop
-  std::unique_ptr<Nan::Callback> function;         // JS callback function the closure represents
-  // these two are required for creating proper sized WrapPointer buffer instances
-  int argc;                      // the number of arguments this function expects
-  size_t resultSize;             // the size of the result pointer
+    /**
+     * the executable function pointer
+     */
+    void *code;
+    /**
+     * JS callback function for reporting catched exceptions for the process'
+     * event loop
+     */
+    v8::Global<v8::Function> jsErrorFunction;
+
+    /**
+     * JS callback function the closure represents
+     */
+    v8::Global<v8::Function> jsFunction;
+
+    std::unique_ptr<Nan::Callback> errorFunction;
+    std::unique_ptr<Nan::Callback> function; 
+
+    // these two are required for creating proper sized WrapPointer
+    // buffer instances
+    /**
+     * the number of arguments this function expects
+     */
+    int argc;
+    /**
+     * the size of the result pointer
+     */
+    size_t resultSize;
 public:
-  /**
-   * constructor
-   */
-  callback_info();
+    /**
+     * constructor
+     */
+    callback_info();
 
-  /**
-   * destructor
-   */
-  ~callback_info();
+    /**
+     * destructor
+     */
+    ~callback_info();
 
-  /**
-   * set argc
-   */
-  void
-  SetArgc(
-    int argc);
+    /**
+     * set argc
+     */
+    void
+    SetArgc(
+        int argc);
 
-  /**
-   * get argc
-   */
-  int
-  GetArgc() const;
+    /**
+     * get argc
+     */
+    int
+    GetArgc() const;
 
-  /**
-   * set result size
-   */
-  void
-  SetResultSize(
-    size_t resultSize);
+    /**
+     * set result size
+     */
+    void
+    SetResultSize(
+        size_t resultSize);
 
-  /**
-   * get result size
-   */
-  size_t
-  GetResultSize() const;
+    /**
+     * get result size
+     */
+    size_t
+    GetResultSize() const;
 
-  /**
-   * get js callback function for reporting catched exceptions
-   */
-  const std::unique_ptr<Nan::Callback>&
-  GetErrorFunction() const; 
+    /**
+     * set js callback function
+     */
+    void
+    SetFunction(
+        v8::Isolate* isolate,
+        v8::Local<v8::Function>& function);
 
-  /**
-   * set js callback function for reporting catched exceptions
-   */
-  void 
-  SetErrorFunction(
-    std::unique_ptr<Nan::Callback>& errorFunction); 
+    /**
+     * get js callback function
+     */
+    v8::Local<v8::Function>
+    GetFunction(
+        v8::Isolate* isolate);
 
-  /**
-   * get js callback function the closure represents
-   */
-  const std::unique_ptr<Nan::Callback>&
-  GetFunction() const;
+    /**
+     * set js callback function for reporting catched exceptions
+     */
+    void
+    SetErrorFunction(
+        v8::Isolate* isolate,
+        v8::Local<v8::Function>& errorFunction);
 
-  /**
-   * set js callback function the closure represents
-   */
-  void 
-  SetFunction(
-    std::unique_ptr<Nan::Callback>& function); 
+    /**
+     * get js callback function for reporting catched exceptions
+     */
+    v8::Local<v8::Function>
+    GetErrorFunction(
+        v8::Isolate* isolate);
+ 
+    /**
+     * get js callback function for reporting catched exceptions
+     */
+    const std::unique_ptr<Nan::Callback>&
+    GetErrorFunction() const; 
 
- /**
-  * get the code to call function
-  */
-  void*
-  GetCode() const;
+    /**
+     * set js callback function for reporting catched exceptions
+     */
+    void 
+    SetErrorFunction(
+        std::unique_ptr<Nan::Callback>& errorFunction); 
 
- /**
-  * set the code to call function
-  */
-  void
-  SetCode(
+    /**
+     * get js callback function the closure represents
+     */
+    const std::unique_ptr<Nan::Callback>&
+    GetFunction() const;
+
+    /**
+     * set js callback function the closure represents
+     */
+    void 
+    SetFunction(
+        std::unique_ptr<Nan::Callback>& function); 
+
+    /**
+     * get the code to call function
+     */
+    void*
+    GetCode() const;
+
+    /**
+     * set the code to call function
+     */
+    void
+    SetCode(
     void* code);
 
-  /**
-   * free allocated object by ffi_closure_alloc
-   */
-  static void
-  Free(callback_info* info);
+    /**
+     * free allocated object by ffi_closure_alloc
+     */
+    static void
+    Free(callback_info* info);
+
+    /**
+     * call error function with specified string
+     */
+    void
+    Error(
+        v8::Isolate* isolate,
+        v8::Local<v8::Value> errorObj);
+ 
+    /**
+     * call error function with specified string
+     */
+    void
+    Error(
+        v8::Isolate* isolate,
+        const char* errorString);
+    
 };
 
 #endif
