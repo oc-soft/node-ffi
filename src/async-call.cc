@@ -1,7 +1,10 @@
 #include "node-ffi/async-call.h"
 #include <uv.h>
+#include <algorithm>
 #include "node-ffi/callback.h"
 #include "node-ffi/wrap-pointer.h"
+#include "node-ffi/async-handle.h"
+#include "callback-info-i.h"
 
 #if __OBJC__ || __OBJC2__
 #include "objc-object-wrap.h"
@@ -163,6 +166,103 @@ AsyncCall::SetArgv(
     jsArgv.Reset(isolate, argv); 
 }
 
+/**
+ * keep javascript asynchronous codes to prevent from reclaiming by gc.
+ */
+void
+AsyncCall::SetAsyncCodes(
+    v8::Isolate* isolate,
+    v8::Local<v8::Array>& codes)
+{
+    jsArgv.Reset(isolate, codes); 
+}
+
+/**
+ * relate javascript code with current worker
+ */
+bool
+AsyncCall::RelateAsyncHandle(
+    v8::Isolate* isolate,
+    v8::Local<v8::Array>& codeBufferArray)
+{
+    struct IterInfo {
+        v8::Isolate* isolate;
+        AsyncCall& self;
+        bool result; 
+        IterInfo(
+            v8::Isolate* isolateParam, 
+            AsyncCall& asyncCall)
+            :   isolate(isolateParam),
+                self(asyncCall),
+                result(true) {
+        }
+    };
+    IterInfo info(isolate, *this);
+    codeBufferArray->Iterate(
+        isolate->GetCurrentContext(),
+        [](uint32_t idx,
+            v8::Local<v8::Value> element,
+            void* user_data) -> v8::Array::CallbackResult {
+        Nan::HandleScope scope;
+        IterInfo* info = reinterpret_cast<IterInfo*>(user_data);
+        v8::Array::CallbackResult result;
+        result = v8::Array::CallbackResult::kContinue; 
+        if (element->IsObject()) {
+            v8::Local<v8::Object> elemObj;
+            elemObj = v8::Local<v8::Object>::Cast(element);
+            callback_info* cbInfo;
+            cbInfo = Callback::DecodeCallbackInfo(info->isolate, elemObj);
+            if (cbInfo) {
+                std::unique_ptr<AsyncHandle> asyncHandle(
+                    node_ffi::AsyncHandle::NewAsyncHandle(cbInfo));
+                if (asyncHandle) {
+                    cbInfo->SetAsyncHandle(asyncHandle);
+                    info->self.AddAsyncInfo(cbInfo);
+                } else {
+                    info->result = false;
+                    result = v8::Array::CallbackResult::kBreak; 
+                }
+            }
+        }
+        return result;
+    }, &info); 
+    return info.result;
+}
+
+/**
+ * add js code to be called asynchronously.
+ */
+void
+AsyncCall::AddAsyncInfo(
+    callback_info* info)
+{
+    asyncCallInfo.push_back(info); 
+}
+
+/**
+ * get list of js code to be called asynchronously.
+ */
+std::list<callback_info*>&
+AsyncCall::GetAsyncInfo()
+{
+    return asyncCallInfo;
+}
+
+/**
+ * close all async handle which attached into js code.
+ */
+void
+AsyncCall::CloseAsyncInfo()
+{
+    struct ClearInfo {
+        void operator()(callback_info* info)
+        {
+            info->GetAsyncHandle().reset();
+        }
+    }; 
+    std::for_each(GetAsyncInfo().begin(), GetAsyncInfo().end(), ClearInfo());
+    GetAsyncInfo().clear();
+}
 
 /**
  * run specified method in worker thread
@@ -214,9 +314,19 @@ AsyncCall::RunWorker(
             jsFunc = v8::Local<v8::Function>::Cast(info[4]);
         }
     }
+    v8::Isolate *isolate = info.GetIsolate();
+    v8::Local<v8::Array> jsAsyncCodes;
+    if (status == 0) {
+        if (info.Length() > 4 && info[5]->IsArray()) {
+            jsAsyncCodes = v8::Local<v8::Array>::Cast(info[5]); 
+            status = p->RelateAsyncHandle(isolate, jsAsyncCodes) ? 0 : -1;
+            if (status) {
+                p->CloseAsyncInfo();
+            }
+        }
+    }
     if (status == 0) {
         // store a persistent references to all the Buffers and the callback function
-        v8::Isolate *isolate = info.GetIsolate();
         p->SetCif(reinterpret_cast<ffi_cif*>(UnwrapPointer(isolate, info[0])));
         p->SetFn(FFI_FN(UnwrapPointer(isolate, info[1])));
         p->SetRes(reinterpret_cast<void*>(UnwrapPointer(isolate, info[2])));
@@ -298,6 +408,8 @@ AsyncCall::IsJsCodeFunction(
  * args[2] - Buffer - the `void *` buffer big enough to hold the return value
  * args[3] - Buffer - the `void **` array of pointers containing the arguments
  * args[4] - Function - the callback function to invoke when complete
+ * args[5] - array - code buffer array. each item is javascript callbacks which
+ * has to be run on the thread attached javascript enviroment.
  */
 
 NAN_METHOD(AsyncCall::Run) {
@@ -384,6 +496,7 @@ AsyncCall::FinishedRunning(
         p->jsCallback.Reset();
         p->jsResult.Reset();
         p->jsArgv.Reset(); 
+        p->CloseAsyncInfo();
     }
     // dispose of our persistent handle to the callback function
 

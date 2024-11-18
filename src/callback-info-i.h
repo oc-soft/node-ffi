@@ -4,8 +4,13 @@
 #include <memory>
 #include <ffi.h>
 #include <nan.h>
+#include <uv.h>
 
 #ifdef __cplusplus
+
+namespace node_ffi {
+    class AsyncHandle;
+}
 
 
 /*
@@ -42,6 +47,14 @@ class callback_info : public ffi_closure {
      * the size of the result pointer
      */
     size_t resultSize;
+
+
+    /**
+     * async handle
+     */
+    std::unique_ptr<node_ffi::AsyncHandle> asyncHandle;
+
+
 public:
     /**
      * constructor
@@ -56,7 +69,7 @@ public:
     /**
      * set argc
      */
-    void
+    void 
     SetArgc(
         int argc);
 
@@ -69,7 +82,7 @@ public:
     /**
      * set result size
      */
-    void
+    void 
     SetResultSize(
         size_t resultSize);
 
@@ -123,6 +136,21 @@ public:
         void* code);
 
     /**
+     * get async handle
+     */
+    std::unique_ptr<node_ffi::AsyncHandle>&
+    GetAsyncHandle();
+
+
+    /**
+     * set async handle
+     */
+    void 
+    SetAsyncHandle(
+        std::unique_ptr<node_ffi::AsyncHandle>& asyncHandle);
+
+
+    /**
      * free allocated object by ffi_closure_alloc
      */
     static void
@@ -144,6 +172,7 @@ public:
         v8::Isolate* isolate,
         const char* errorString);
     
+
 };
 
 #endif

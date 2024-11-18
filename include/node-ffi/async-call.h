@@ -2,6 +2,7 @@
 #define __NODE_FFI_ASYNC_CALL_H__
 
 #include <memory>
+#include <list>
 #include <ffi.h>
 #include <nan.h>
 #include <uv.h>
@@ -12,6 +13,9 @@
 
 
 #ifdef __cplusplus
+
+class callback_info;
+
 namespace node_ffi {
 /*
  * Class used to store stuff during async ffi_call() invokations.
@@ -86,11 +90,32 @@ private:
     void *res = nullptr;
     void **argv = nullptr;
     std::unique_ptr<Nan::Callback> callback;
-    v8::Global<v8::Object> jsCif;
-    v8::Global<v8::Function> jsCallback;
-    v8::Global<v8::Object> jsResult;
-    v8::Global<v8::Object> jsArgv; 
 
+    /**
+     * keep javascript callback object to prevent from reclaiming by gc.
+     */
+     v8::Global<v8::Object> jsCif;
+
+    /**
+     * keep javascript callback object to prevent from reclaiming by gc.
+     */
+    v8::Global<v8::Function> jsCallback;
+    /**
+     * keep javascript result object to prevent from reclaiming by gc.
+     */
+    v8::Global<v8::Object> jsResult;
+    /**
+     * keep javascript argument variables object to prevent from reclaiming
+     * by gc.
+     */
+    v8::Global<v8::Object> jsArgv; 
+    /**
+     * keep javascript asynchronous codes to prevent from reclaiming by gc.
+     */
+ 
+    v8::Global<v8::Object> jsAsyncCodes;
+    std::list<callback_info*> asyncCallInfo;
+    
     /**
      * keep javascript cif object to prevent from reclaim by gc.
      */
@@ -99,13 +124,16 @@ private:
         v8::Isolate* isolate,
         v8::Local<v8::Object>& cif);
 
+    /**
+     * keep javascript callback object to prevent from reclaiming by gc.
+     */
     void
     SetCallback(
         v8::Isolate* isolate,
         v8::Local<v8::Function>& callback);
 
     /**
-     * keep javascript result object to prevent from reclaim by gc.
+     * keep javascript result object to prevent from reclaiming by gc.
      */
     void
     SetResult(
@@ -113,13 +141,22 @@ private:
         v8::Local<v8::Object>& result);
 
     /**
-     * keep javascript argument variables object to prevent from reclaim by gc.
+     * keep javascript argument variables object to prevent from reclaiming
+     * by gc.
      */
     void
     SetArgv(
         v8::Isolate* isolate,
         v8::Local<v8::Object>& argv);
 
+
+    /**
+     * keep javascript asynchronous codes to prevent from reclaiming by gc.
+     */
+    void
+    SetAsyncCodes(
+        v8::Isolate* isolate,
+        v8::Local<v8::Array>& codes);
  
     /**
      * asynchronous function entry point for javascript
@@ -161,6 +198,32 @@ private:
     FinishedRunning(
         uv_work_t *req,
         int status);
+    /**
+     * relate javascript code with current worker
+     */
+    bool
+    RelateAsyncHandle(
+        v8::Isolate* isolate,
+        v8::Local<v8::Array>& codeBufferArray);
+
+    /**
+     * add js code to be called asynchronously.
+     */
+    void 
+    AddAsyncInfo(
+        callback_info* info);
+
+    /**
+     * get list of js code to be called asynchronously.
+     */
+    std::list<callback_info*>&
+    GetAsyncInfo();
+
+    /**
+     * close all async handle which attached into js code.
+     */
+    void
+    CloseAsyncInfo();
 };
 
 }

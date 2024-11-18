@@ -1,5 +1,8 @@
 #include "callback-info-i.h"
+#include <cstddef>
 #include <nan.h>
+#include <utility>
+#include "node-ffi/async-handle.h"
 
 
 /**
@@ -17,6 +20,7 @@ callback_info::callback_info()
  */
 callback_info::~callback_info()
 {
+
     jsFunction.Reset();
     jsErrorFunction.Reset();
 }
@@ -123,6 +127,27 @@ callback_info::SetCode(
 }
 
 /**
+ * get async handle
+ */
+std::unique_ptr<node_ffi::AsyncHandle>&
+callback_info::GetAsyncHandle()
+{
+    return asyncHandle;
+}
+
+
+/**
+ * set async handle
+ */
+void 
+callback_info::SetAsyncHandle(
+    std::unique_ptr<node_ffi::AsyncHandle>& asyncHandle)
+{
+    this->asyncHandle = std::move(asyncHandle);
+}
+
+
+/**
  * call error function with specified string
  */
 void
@@ -172,4 +197,5 @@ callback_info::Free(
         ffi_closure_free(info);
     }
 }
+
 

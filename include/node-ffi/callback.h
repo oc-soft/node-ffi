@@ -13,9 +13,11 @@ class callback_info;
 
 namespace node_ffi {
 class AsyncCall;
+class AsyncHandle;
 
 class Callback {
     friend class AsyncCall;
+    friend class AsyncHandle;
 public:
     static NAN_MODULE_INIT(Initialize);
     static void WatcherCallback(uv_async_t *w, int revents);
