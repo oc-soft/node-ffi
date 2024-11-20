@@ -122,7 +122,7 @@ describe('Callback', function () {
       pingPongFn.async(cb, function (err, ret) {
         assert.equal(iterations, 0)
         done()
-      }, [cb])
+      }, [{ code: cb, 'await': true }])
     })
 
     /**

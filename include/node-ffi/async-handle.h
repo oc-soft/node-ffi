@@ -10,9 +10,31 @@ class callback_info;
 
 namespace node_ffi {
 
+class Callback;
+
 class AsyncHandle : public uv_async_t {
     friend class callback_info;
+    friend class Callback;
+    /**
+     * javascript code container
+     */
     callback_info* info;
+
+    /**
+     * eventt loop thread id
+     */ 
+    uv_thread_t loopThread;
+
+    /**
+     * used for condition 
+     */
+    std::unique_ptr<uv_mutex_t> conditionMutex;
+
+    /**
+     * Condition indicates whether resultRef and argRef processed by
+     * javascript code.
+     */
+    std::unique_ptr<uv_cond_t> condition;
     // these two are required for creating proper sized WrapPointer
     // buffer instances
 
@@ -45,6 +67,12 @@ class AsyncHandle : public uv_async_t {
     AllocateResult(
         size_t resultSize);
 
+
+    /**
+     * initialize condition mutex
+     */
+    bool
+    InitAwaitOption();
 public:
 
     /**
@@ -57,7 +85,8 @@ public:
      */
     static AsyncHandle*
     NewAsyncHandle(
-        callback_info* callbackInfo);
+        callback_info* callbackInfo,
+        bool await = false);
     /**
      * run in uv event loop
      */

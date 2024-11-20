@@ -10,6 +10,7 @@
 #include "code-object.h"
 #include "threaded_callback_invokation.h"
 #include "node-ffi/wrap-pointer.h"
+#include "node-ffi/async-handle.h"
 
 using namespace v8;
 using namespace node;
@@ -135,7 +136,9 @@ Callback::DecodeCallbackInfo(
             v8::Local<v8::Object> codeObj = codeObjValue0->ToObject(
                 context).ToLocalChecked();
             codeObj0 = Nan::ObjectWrap::Unwrap<node_ffi::CodeObject>(codeObj);
-            result = codeObj0->callbackInfo;
+            if (codeObj0) {
+                result = codeObj0->callbackInfo;
+            }
         }
     }
     return result;
@@ -271,6 +274,51 @@ NAN_METHOD(Callback::NewCallback) {
  * executed.
  */
 
+void Callback::Invoke(
+    ffi_cif *cif,
+    void *retval,
+    void **parameters,
+    void *user_data) {
+    callback_info *info = reinterpret_cast<callback_info *>(user_data);
+    std::unique_ptr<node_ffi::AsyncHandle>& asyncHandle
+        = info->GetAsyncHandle();
+    bool dispatch = true;
+    if (asyncHandle) {
+        uv_thread_t self_thread = uv_thread_self();
+        dispatch = uv_thread_equal(&self_thread, &asyncHandle->loopThread);
+    }
+    if (dispatch) {
+        DispatchToV8(info, retval, parameters);
+    } else {
+        if (asyncHandle) {
+            if (asyncHandle->conditionMutex) {
+                uv_mutex_lock(asyncHandle->conditionMutex.get());
+            }
+            std::memcpy(asyncHandle->argvRef.get(), parameters,
+                sizeof(void*) * info->GetArgc());
+
+            if (asyncHandle->condition) {
+                uv_async_send(asyncHandle.get());
+                uv_cond_wait(
+                    asyncHandle->condition.get(),
+                    asyncHandle->conditionMutex.get());
+
+                std::memcpy(parameters, asyncHandle->argvRef.get(), 
+                    sizeof(void*) * info->GetArgc());
+                std::memcpy(retval, asyncHandle->resultRef.get(),
+                    sizeof(void*));
+                
+            } 
+        }
+    }
+}
+
+
+/*
+ * This is the function that gets called when the C function pointer gets
+ * executed.
+ */
+#if 0
 void Callback::Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data) {
   callback_info *info = reinterpret_cast<callback_info *>(user_data);
 
@@ -312,6 +360,7 @@ void Callback::Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_
     delete inv;
   }
 }
+#endif
 
 /*
  * Init stuff.

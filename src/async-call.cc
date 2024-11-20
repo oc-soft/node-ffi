@@ -210,11 +210,11 @@ AsyncCall::RelateAsyncHandle(
         if (element->IsObject()) {
             v8::Local<v8::Object> elemObj;
             elemObj = v8::Local<v8::Object>::Cast(element);
-            callback_info* cbInfo;
-            cbInfo = Callback::DecodeCallbackInfo(info->isolate, elemObj);
-            if (cbInfo) {
+            callback_info* cbInfo = nullptr;
+            bool await = false;
+            if (DecodeAsyncCallback(info->isolate, elemObj, &cbInfo, await)) {
                 std::unique_ptr<AsyncHandle> asyncHandle(
-                    node_ffi::AsyncHandle::NewAsyncHandle(cbInfo));
+                    node_ffi::AsyncHandle::NewAsyncHandle(cbInfo, await));
                 if (asyncHandle) {
                     cbInfo->SetAsyncHandle(asyncHandle);
                     info->self.AddAsyncInfo(cbInfo);
@@ -227,6 +227,61 @@ AsyncCall::RelateAsyncHandle(
         return result;
     }, &info); 
     return info.result;
+}
+
+/**
+ * decode callback info and parameters for async handle
+ * @param isolate 
+ * @param codeAsyncContainer contains code object and parameter for
+ * async handle
+ * @param info output parameter
+ * @param await flag output parameter
+ * @return you get true if 
+ */
+bool 
+AsyncCall::DecodeAsyncCallback(
+    v8::Isolate* isolate,
+    v8::Local<v8::Object>& codeAsyncContainer,
+    callback_info** info,
+    bool& await)
+{
+    bool result;
+    result = false;
+    callback_info* cbInfo;
+    cbInfo = nullptr;
+    cbInfo = Callback::DecodeCallbackInfo(isolate, codeAsyncContainer);
+    await = false;
+    if (cbInfo) {
+        result = true;
+    } 
+    if (!result) {
+        v8::MaybeLocal<v8::Value> codeValue;
+        codeValue = codeAsyncContainer->Get(
+            isolate->GetCurrentContext(),
+            v8::String::NewFromUtf8(isolate, "code").ToLocalChecked()); 
+        if (!codeValue.IsEmpty()) {
+            v8::Local<v8::Value> codeValue0 = codeValue.ToLocalChecked();
+            if (codeValue0->IsObject()) {
+                v8::Local<v8::Object> codeObj;
+                codeObj = v8::Local<v8::Object>::Cast(codeValue0);
+                cbInfo = Callback::DecodeCallbackInfo(isolate, codeObj);
+                result = cbInfo ? true : false;
+            }
+        }
+        if (result) {
+            v8::MaybeLocal<v8::Value> awaitValue;
+            awaitValue = codeAsyncContainer->Get(
+                isolate->GetCurrentContext(),
+                v8::String::NewFromUtf8(isolate, "await").ToLocalChecked()); 
+            if (!awaitValue.IsEmpty()) {
+                await = awaitValue.ToLocalChecked()->IsTrue();
+            }
+        } 
+    }
+    if (result) {
+        *info = cbInfo;
+    }
+    return result;
 }
 
 /**

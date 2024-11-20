@@ -224,6 +224,22 @@ private:
      */
     void
     CloseAsyncInfo();
+
+    /**
+     * decode callback info and parameters for async handle
+     * @param isolate 
+     * @param codeAsyncContainer contains code object and parameter for
+     * async handle
+     * @param info output parameter
+     * @param await flag output parameter
+     * @return you get true if 
+     */
+    static bool 
+    DecodeAsyncCallback(
+        v8::Isolate* isolate,
+        v8::Local<v8::Object>& codeAsyncContainer,
+        callback_info** info,
+        bool& await);
 };
 
 }
