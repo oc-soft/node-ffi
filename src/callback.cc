@@ -8,35 +8,13 @@
 #include "node-ffi.h"
 #include "callback-info-i.h"
 #include "code-object.h"
-#include "threaded_callback_invokation.h"
 #include "node-ffi/wrap-pointer.h"
 #include "node-ffi/async-handle.h"
 
 using namespace v8;
 using namespace node;
 
-#if !(NODE_VERSION_AT_LEAST(0, 11, 15))
-  #ifdef WIN32
-    int uv_thread_equal(const uv_thread_t* t1, const uv_thread_t* t2) {
-      return *t1 == *t2;
-    }
-  #else
-    #include <pthread.h>
-    int uv_thread_equal(const uv_thread_t* t1, const uv_thread_t* t2) {
-      return pthread_equal(*t1, *t2);
-    }
-  #endif
-#endif
-
 namespace node_ffi {
-#ifdef WIN32
-DWORD Callback::g_threadID;
-#else
-uv_thread_t Callback::g_mainthread;
-#endif
-uv_mutex_t    Callback::g_queue_mutex;
-std::queue<ThreadedCallbackInvokation *> Callback::g_queue;
-uv_async_t         Callback::g_async;
 
 /*
  * Invokes the JS callback function.
@@ -100,20 +78,6 @@ void Callback::DispatchToV8(callback_info *info, void *retval, void **parameters
             info->Error(isolate, outOfMemory);
         }
     }
-}
-
-void Callback::WatcherCallback(uv_async_t *w, int revents) {
-  uv_mutex_lock(&g_queue_mutex);
-
-  while (!g_queue.empty()) {
-    ThreadedCallbackInvokation *inv = g_queue.front();
-    g_queue.pop();
-
-    DispatchToV8(inv->m_cbinfo, inv->m_retval, inv->m_parameters, true);
-    inv->SignalDoneExecuting();
-  }
-
-  uv_mutex_unlock(&g_queue_mutex);
 }
 
 /**
@@ -311,55 +275,6 @@ void Callback::Invoke(
     }
 }
 
-
-/*
- * This is the function that gets called when the C function pointer gets
- * executed.
- */
-#if 0
-void Callback::Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data) {
-  callback_info *info = reinterpret_cast<callback_info *>(user_data);
-
-  // are we executing from another thread?
-#ifdef WIN32
-  if (g_threadID == GetCurrentThreadId()) {
-#else
-  uv_thread_t self_thread = (uv_thread_t) uv_thread_self();
-  if (uv_thread_equal(&self_thread, &g_mainthread)) {
-#endif
-    DispatchToV8(info, retval, parameters);
-  } else {
-    // hold the event loop open while this is executing
-#if NODE_VERSION_AT_LEAST(0, 7, 9)
-    uv_ref((uv_handle_t *)&g_async);
-#else
-    uv_ref(uv_default_loop());
-#endif
-
-    // create a temporary storage area for our invokation parameters
-    ThreadedCallbackInvokation *inv = new ThreadedCallbackInvokation(info, retval, parameters);
-
-    // push it to the queue -- threadsafe
-    uv_mutex_lock(&g_queue_mutex);
-    g_queue.push(inv);
-    uv_mutex_unlock(&g_queue_mutex);
-
-    // send a message to our main thread to wake up the WatchCallback loop
-    uv_async_send(&g_async);
-
-    // wait for signal from calling thread
-    inv->WaitForExecution();
-
-#if NODE_VERSION_AT_LEAST(0, 7, 9)
-    uv_unref((uv_handle_t *)&g_async);
-#else
-    uv_unref(uv_default_loop());
-#endif
-    delete inv;
-  }
-}
-#endif
-
 /*
  * Init stuff.
  */
@@ -377,21 +292,6 @@ void Callback::Initialize(Handle<Object> target) {
     Nan::New<FunctionTemplate>(NewCallback)->GetFunction());
 #endif
 
-  // initialize our threaded invokation stuff
-#ifdef WIN32
-  g_threadID = GetCurrentThreadId();
-#else
-  g_mainthread = (uv_thread_t) uv_thread_self();
-#endif
-  uv_async_init(uv_default_loop(), &g_async, (uv_async_cb) Callback::WatcherCallback);
-  uv_mutex_init(&g_queue_mutex);
-
-  // allow the event loop to exit while this is running
-#if NODE_VERSION_AT_LEAST(0, 7, 9)
-  uv_unref((uv_handle_t *)&g_async);
-#else
-  uv_unref(uv_default_loop());
-#endif
 }
 
 }

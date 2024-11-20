@@ -7,7 +7,6 @@
         , 'src/ffi.cc'
         , 'src/constants.cc'
         , 'src/callback.cc'
-        , 'src/threaded_callback_invokation.cc'
         , 'src/callback-info-i.cc'
         , 'src/code-object.cc'
         , 'src/async-call.cc'

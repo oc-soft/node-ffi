@@ -8,7 +8,6 @@
 #ifdef __cplusplus
 
 
-class ThreadedCallbackInvokation;
 class callback_info;
 
 namespace node_ffi {
@@ -20,7 +19,6 @@ class Callback {
     friend class AsyncHandle;
 public:
     static NAN_MODULE_INIT(Initialize);
-    static void WatcherCallback(uv_async_t *w, int revents);
 
   protected:
     static void DispatchToV8(callback_info *self, void *retval, void **parameters, bool dispatched = false);
@@ -28,14 +26,6 @@ public:
     static NAN_METHOD(NewCallback);
 
   private:
-#ifdef WIN32
-    static DWORD g_threadID;
-#else
-    static uv_thread_t          g_mainthread;
-#endif // WIN32
-    static uv_mutex_t    g_queue_mutex;
-    static std::queue<ThreadedCallbackInvokation *> g_queue;
-    static uv_async_t         g_async;
     /**
      * decode callback_info from code buffer object.
      */
