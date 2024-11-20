@@ -8,6 +8,7 @@
 
 class callback_info;
 
+
 namespace node_ffi {
 
 class Callback;
@@ -73,6 +74,36 @@ class AsyncHandle : public uv_async_t {
      */
     bool
     InitAwaitOption();
+
+    /**
+     * tear down condition mutex
+     */
+    void
+    TearDownAwaitOption();
+
+    /**
+     * wait condition
+     */
+    void
+    WaitCondition();
+
+    /**
+     * lock condition mutex
+     */
+    void
+    LockConditionMutex();
+
+    /**
+     * unlock condition mutex
+     */
+    void
+    UnlockConditionMutex();
+
+    /**
+     * If result is true then worker thread will be wait javascript code.
+     */
+     bool
+    IsAwait() const; 
 public:
 
     /**

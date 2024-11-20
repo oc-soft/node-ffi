@@ -95,16 +95,68 @@ AsyncHandle::InitAwaitOption()
     }
 
     if (!result) {
-        if (condition) {
-            uv_cond_destroy(condition.get());
-            condition.reset();
-        }
-        if (conditionMutex) {
-            uv_mutex_destroy(conditionMutex.get());
-            conditionMutex.reset();
-        }
+        TearDownAwaitOption();
     }
     return result;
+}
+
+/**
+ * tear down condition mutex
+ */
+void
+AsyncHandle::TearDownAwaitOption()
+{
+    if (condition) {
+        uv_cond_destroy(condition.get());
+        condition.reset();
+    }
+    if (conditionMutex) {
+        uv_mutex_destroy(conditionMutex.get());
+        conditionMutex.reset();
+    }
+}
+
+/**
+ * wait condition
+ */
+void
+AsyncHandle::WaitCondition()
+{
+    if (condition &&  conditionMutex) {
+        uv_cond_wait(condition.get(), conditionMutex.get());
+    }
+}
+
+
+/**
+ * lock condition mutex
+ */
+void
+AsyncHandle::LockConditionMutex()
+{
+    if (conditionMutex) {
+        uv_mutex_lock(conditionMutex.get());
+    }
+}
+
+/**
+ * unlock condition mutex
+ */
+void
+AsyncHandle::UnlockConditionMutex()
+{
+    if (conditionMutex) {
+        uv_mutex_unlock(conditionMutex.get());
+    }
+}
+
+/**
+ * If result is true then worker thread will be wait javascript code.
+ */
+ bool
+AsyncHandle::IsAwait() const
+{
+    return conditionMutex && condition;
 }
 
 /**
@@ -127,8 +179,10 @@ AsyncHandle::NewAsyncHandle(
     if (state == 0) {
         state = result->AllocateResult(info->GetResultSize()) ? 0 : -1;
     }
-    if (state == 0 && await) {
-        state = result->InitAwaitOption() ? 0 : -1;
+    if (state == 0) {
+        if (await) {
+            state = result->InitAwaitOption() ? 0 : -1;
+        }
     }
     if (state) {
         delete result;
@@ -145,20 +199,17 @@ AsyncHandle::RunInEventLoop(
     uv_async_t* asyncHandle)
 {
     AsyncHandle* self = reinterpret_cast<AsyncHandle*>(asyncHandle);
-    if (self->conditionMutex) {
-        uv_mutex_lock(self->conditionMutex.get());
+    if (self->IsAwait()) {
+        self->LockConditionMutex();
     }
     
     Callback::DispatchToV8(
         self->info, 
         reinterpret_cast<void*>(self->resultRef.get()),
         self->argvRef.get(), true);
-    if (self->conditionMutex) {
-        uv_mutex_unlock(self->conditionMutex.get());
-    }
-     
-    if (self->condition) {
+    if (self->IsAwait()) {
         uv_cond_signal(self->condition.get());
+        self->UnlockConditionMutex();
     }
 }
 

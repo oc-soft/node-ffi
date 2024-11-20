@@ -291,23 +291,21 @@ void Callback::Invoke(
         DispatchToV8(info, retval, parameters);
     } else {
         if (asyncHandle) {
-            if (asyncHandle->conditionMutex) {
-                uv_mutex_lock(asyncHandle->conditionMutex.get());
+            bool await = asyncHandle->IsAwait();
+            if (await) {
+                asyncHandle->LockConditionMutex();
             }
             std::memcpy(asyncHandle->argvRef.get(), parameters,
                 sizeof(void*) * info->GetArgc());
-
-            if (asyncHandle->condition) {
+            if (await) {
                 uv_async_send(asyncHandle.get());
-                uv_cond_wait(
-                    asyncHandle->condition.get(),
-                    asyncHandle->conditionMutex.get());
+                asyncHandle->WaitCondition();
 
                 std::memcpy(parameters, asyncHandle->argvRef.get(), 
                     sizeof(void*) * info->GetArgc());
                 std::memcpy(retval, asyncHandle->resultRef.get(),
                     sizeof(void*));
-                
+                asyncHandle->UnlockConditionMutex();
             } 
         }
     }
