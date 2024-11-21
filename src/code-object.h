@@ -2,10 +2,10 @@
 #define __CODE_OBJECT_H__
 #include "nan.h"
 #ifdef __cplusplus
-class callback_info;
 
 namespace node_ffi {
 
+class Closure;
 class Callback;
 /**
  * It keeps ffi callback info
@@ -16,13 +16,13 @@ class CodeObject : public Nan::ObjectWrap
     /**
      * callback info
      */
-    callback_info* callbackInfo;
+    Closure* callbackInfo;
 public:
     /**
      * constructor
      */
     CodeObject(
-        callback_info* cb);
+        Closure* cb);
 
     /**
      * destructor

@@ -1,5 +1,5 @@
-#ifndef __CALLBACK_INFO_I_H__
-#define __CALLBACK_INFO_I_H__
+#ifndef __NODE_FFI_CLOSURE_H__
+#define __NODE_FFI_CLOSURE_H__
 
 #include <memory>
 #include <ffi.h>
@@ -9,9 +9,7 @@
 #ifdef __cplusplus
 
 namespace node_ffi {
-    class AsyncHandle;
-}
-
+class AsyncHandle;
 
 /*
  * One of these structs gets created for each `ffi.Callback()` invokation in
@@ -20,7 +18,7 @@ namespace node_ffi {
  * `ffi_closure_alloc()`, and free'd in the closure_pointer_cb function.
  */
 
-class callback_info : public ffi_closure {
+class Closure : public ffi_closure {
     /**
      * the executable function pointer
      */
@@ -59,12 +57,12 @@ public:
     /**
      * constructor
      */
-    callback_info();
+    Closure();
 
     /**
      * destructor
      */
-    ~callback_info();
+    ~Closure();
 
     /**
      * set argc
@@ -154,7 +152,7 @@ public:
      * free allocated object by ffi_closure_alloc
      */
     static void
-    Free(callback_info* info);
+    Free(Closure* info);
 
     /**
      * call error function with specified string
@@ -175,5 +173,7 @@ public:
 
 };
 
+}
 #endif
+// vi: se ts=4 sw=4 et:
 #endif

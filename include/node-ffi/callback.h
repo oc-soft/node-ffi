@@ -8,11 +8,11 @@
 #ifdef __cplusplus
 
 
-class callback_info;
 
 namespace node_ffi {
 class AsyncCall;
 class AsyncHandle;
+class Closure;
 
 class Callback {
     friend class AsyncCall;
@@ -21,15 +21,15 @@ public:
     static NAN_MODULE_INIT(Initialize);
 
   protected:
-    static void DispatchToV8(callback_info *self, void *retval, void **parameters, bool dispatched = false);
+    static void DispatchToV8(Closure *self, void *retval, void **parameters, bool dispatched = false);
     static void Invoke(ffi_cif *cif, void *retval, void **parameters, void *user_data);
     static NAN_METHOD(NewCallback);
 
   private:
     /**
-     * decode callback_info from code buffer object.
+     * decode Closure from code buffer object.
      */
-    static callback_info*
+    static Closure*
     DecodeCallbackInfo(
         v8::Isolate* isolate,
         v8::Local<v8::Object>& codeBuffer);

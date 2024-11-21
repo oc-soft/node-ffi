@@ -1,12 +1,11 @@
 #include "node-ffi/callback.h"
-// https://raw.githubusercontent.com/ghostoy/node-ffi/master/src/callback_info.cc
 // Reference:
 //   http://www.bufferoverflow.ch/cgi-bin/dwww/usr/share/doc/libffi5/html/The-Closure-API.html
 
 #include <node.h>
 #include <string>
 #include "node-ffi.h"
-#include "callback-info-i.h"
+#include "node-ffi/closure.h"
 #include "code-object.h"
 #include "node-ffi/wrap-pointer.h"
 #include "node-ffi/async-handle.h"
@@ -20,7 +19,7 @@ namespace node_ffi {
  * Invokes the JS callback function.
  */
 
-void Callback::DispatchToV8(callback_info *info, void *retval, void **parameters, bool dispatched) {
+void Callback::DispatchToV8(Closure *info, void *retval, void **parameters, bool dispatched) {
     Nan::HandleScope scope;
 
     static const char* errorMessage = "ffi fatal: callback has been garbage collected!";
@@ -81,14 +80,14 @@ void Callback::DispatchToV8(callback_info *info, void *retval, void **parameters
 }
 
 /**
- * decode callback_info from code buffer object.
+ * decode Closure from code buffer object.
  */
-callback_info*
+Closure*
 Callback::DecodeCallbackInfo(
     v8::Isolate* isolate,
     v8::Local<v8::Object>& codeBuffer)
 {
-    callback_info* result = nullptr;
+    Closure* result = nullptr;
     Local<Context> context = isolate->GetCurrentContext();
     v8::MaybeLocal<v8::Value> codeObjValue = codeBuffer->Get(context, 
         String::NewFromUtf8(isolate, "code").ToLocalChecked());
@@ -153,20 +152,20 @@ NAN_METHOD(Callback::NewCallback) {
     if (info[4]->IsFunction()) {
         callback = Local<Function>::Cast(info[4]);
     }
-    callback_info* cbInfo;
+    Closure* cbInfo;
     void* code;
     void* cbBuf;
     cbBuf = nullptr;
     cbInfo = nullptr;
     if (state == 0) {
-        cbBuf = ffi_closure_alloc(sizeof(callback_info), &code);
+        cbBuf = ffi_closure_alloc(sizeof(Closure), &code);
         if (!cbBuf) {
             state = -1;
             Nan::ThrowError("ffi_closure_alloc() Returned Error");
         }
     }
     if (state == 0) {
-        cbInfo = new (cbBuf) callback_info();
+        cbInfo = new (cbBuf) Closure();
         state = cbInfo ? 0 : -1;
     }
     if (state == 0) {
@@ -228,7 +227,7 @@ NAN_METHOD(Callback::NewCallback) {
     }
 
     if (cbInfo) {
-        callback_info::Free(cbInfo);
+        Closure::Free(cbInfo);
     }
 
 }
@@ -243,7 +242,7 @@ void Callback::Invoke(
     void *retval,
     void **parameters,
     void *user_data) {
-    callback_info *info = reinterpret_cast<callback_info *>(user_data);
+    Closure *info = reinterpret_cast<Closure *>(user_data);
     std::unique_ptr<node_ffi::AsyncHandle>& asyncHandle
         = info->GetAsyncHandle();
     bool dispatch = true;

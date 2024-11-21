@@ -3,20 +3,21 @@
     {
       'target_name': 'ffi_bindings',
       'sources': [
-        'src/node-module.cc'
-        , 'src/ffi.cc'
-        , 'src/constants.cc'
-        , 'src/callback.cc'
-        , 'src/callback-info-i.cc'
-        , 'src/code-object.cc'
-        , 'src/async-call.cc'
-        , 'src/async-handle.cc'
-        , 'src/objc-object-wrap.cc'
-        , 'src/wrap-pointer.cc'
-        , 'src/dl.cc'
-        , 'src/errno.cc'
-        , 'src/types.cc'
-        , 'src/ffi-config.cc'
+        'src/node-module.cc',
+        'src/call.cc',
+        'src/prep.cc',
+        'src/constants.cc',
+        'src/callback.cc',
+        'src/closure.cc',
+        'src/code-object.cc',
+        'src/async-call.cc',
+        'src/async-handle.cc',
+        'src/objc-object-wrap.cc',
+        'src/wrap-pointer.cc',
+        'src/dl.cc',
+        'src/errno.cc',
+        'src/types.cc',
+        'src/ffi-config.cc'
       ],
       'include_dirs': [
         '<!(node -e "require(\'nan\')")',

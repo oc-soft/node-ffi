@@ -1,12 +1,12 @@
 #include "code-object.h"
-#include "callback-info-i.h"
+#include "node-ffi/closure.h"
 
 namespace node_ffi {
 
 /**
  * constructor
  */
-CodeObject::CodeObject(callback_info* cb)
+CodeObject::CodeObject(Closure* cb)
     : callbackInfo(cb)
 {
 }
@@ -17,7 +17,7 @@ CodeObject::CodeObject(callback_info* cb)
 CodeObject::~CodeObject()
 {
     if (callbackInfo) {
-        callback_info::Free(callbackInfo);
+        Closure::Free(callbackInfo);
         callbackInfo = nullptr;
     } 
 }

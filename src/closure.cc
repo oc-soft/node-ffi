@@ -1,14 +1,15 @@
-#include "callback-info-i.h"
+#include "node-ffi/closure.h"
 #include <cstddef>
 #include <nan.h>
 #include <utility>
 #include "node-ffi/async-handle.h"
 
+namespace node_ffi {
 
 /**
  * constructor
  */
-callback_info::callback_info()
+Closure::Closure()
     : code(nullptr),
         argc(0),
         resultSize(0)
@@ -18,7 +19,7 @@ callback_info::callback_info()
 /**
  * destructor
  */
-callback_info::~callback_info()
+Closure::~Closure()
 {
 
     jsFunction.Reset();
@@ -29,7 +30,7 @@ callback_info::~callback_info()
  * set argc
  */
 void
-callback_info::SetArgc(
+Closure::SetArgc(
     int argc)
 {
     this->argc = argc;
@@ -39,7 +40,7 @@ callback_info::SetArgc(
  * get argc
  */
 int
-callback_info::GetArgc() const
+Closure::GetArgc() const
 {
     return argc;
 }
@@ -48,7 +49,7 @@ callback_info::GetArgc() const
  * set result size
  */
 void
-callback_info::SetResultSize(
+Closure::SetResultSize(
     size_t resultSize)
 {
     this->resultSize = resultSize;
@@ -58,7 +59,7 @@ callback_info::SetResultSize(
  * get result size
  */
 size_t
-callback_info::GetResultSize() const
+Closure::GetResultSize() const
 {
     return resultSize;
 }
@@ -66,7 +67,7 @@ callback_info::GetResultSize() const
  * set js callback function
  */
 void
-callback_info::SetFunction(
+Closure::SetFunction(
     v8::Isolate* isolate,
     v8::Local<v8::Function>& function)
 {
@@ -77,7 +78,7 @@ callback_info::SetFunction(
  * get js callback function
  */
 v8::Local<v8::Function>
-callback_info::GetFunction(
+Closure::GetFunction(
     v8::Isolate* isolate)
 {
     return jsFunction.Get(isolate);
@@ -88,7 +89,7 @@ callback_info::GetFunction(
  * set js callback function for reporting catched exceptions
  */
 void
-callback_info::SetErrorFunction(
+Closure::SetErrorFunction(
     v8::Isolate* isolate,
     v8::Local<v8::Function>& errorFunction)
 {
@@ -99,7 +100,7 @@ callback_info::SetErrorFunction(
  * get js callback function for reporting catched exceptions
  */
 v8::Local<v8::Function>
-callback_info::GetErrorFunction(
+Closure::GetErrorFunction(
     v8::Isolate* isolate)
 {
     return jsErrorFunction.Get(isolate);
@@ -111,7 +112,7 @@ callback_info::GetErrorFunction(
  * get the code to call function
  */
 void*
-callback_info::GetCode() const
+Closure::GetCode() const
 {
     return code;
 }
@@ -120,7 +121,7 @@ callback_info::GetCode() const
  * set the code to call function
  */
 void
-callback_info::SetCode(
+Closure::SetCode(
     void* code)
 {
     this->code = code;
@@ -130,7 +131,7 @@ callback_info::SetCode(
  * get async handle
  */
 std::unique_ptr<node_ffi::AsyncHandle>&
-callback_info::GetAsyncHandle()
+Closure::GetAsyncHandle()
 {
     return asyncHandle;
 }
@@ -140,7 +141,7 @@ callback_info::GetAsyncHandle()
  * set async handle
  */
 void 
-callback_info::SetAsyncHandle(
+Closure::SetAsyncHandle(
     std::unique_ptr<node_ffi::AsyncHandle>& asyncHandle)
 {
     this->asyncHandle = std::move(asyncHandle);
@@ -151,7 +152,7 @@ callback_info::SetAsyncHandle(
  * call error function with specified string
  */
 void
-callback_info::Error(
+Closure::Error(
     v8::Isolate* isolate,
     const char* errorString)
 {
@@ -166,7 +167,7 @@ callback_info::Error(
  * call error function with specified string
  */
 void
-callback_info::Error(
+Closure::Error(
     v8::Isolate* isolate,
     v8::Local<v8::Value> errorValue)
 {
@@ -182,20 +183,20 @@ callback_info::Error(
 }
 
 /**
- * free callback_info
+ * free Closure
  */
 void
-callback_info::Free(
-    callback_info* info)
+Closure::Free(
+    Closure* info)
 {
     if (info)
     {
         // dispose of the Persistent function reference
-        info->~callback_info();
+        info->~Closure();
 
         // now we can free the closure data
         ffi_closure_free(info);
     }
 }
 
-
+}

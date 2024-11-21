@@ -6,20 +6,20 @@
 
 #ifdef __cplusplus
 
-class callback_info;
-
 
 namespace node_ffi {
+
+class Closure;
 
 class Callback;
 
 class AsyncHandle : public uv_async_t {
-    friend class callback_info;
+    friend class Closure;
     friend class Callback;
     /**
      * javascript code container
      */
-    callback_info* info;
+    Closure* info;
 
     /**
      * eventt loop thread id
@@ -52,7 +52,7 @@ class AsyncHandle : public uv_async_t {
     /**
      * constructor
      */
-    AsyncHandle(callback_info* callbackInfo);
+    AsyncHandle(Closure* callbackInfo);
 
     /**
      * allocate argv
@@ -116,7 +116,7 @@ public:
      */
     static AsyncHandle*
     NewAsyncHandle(
-        callback_info* callbackInfo,
+        Closure* callbackInfo,
         bool await = false);
     /**
      * run in uv event loop

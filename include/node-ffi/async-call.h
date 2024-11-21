@@ -14,9 +14,9 @@
 
 #ifdef __cplusplus
 
-class callback_info;
 
 namespace node_ffi {
+class Closure;
 /*
  * Class used to store stuff during async ffi_call() invokations.
  */
@@ -114,7 +114,7 @@ private:
      */
  
     v8::Global<v8::Object> jsAsyncCodes;
-    std::list<callback_info*> asyncCallInfo;
+    std::list<Closure*> asyncCallInfo;
     
     /**
      * keep javascript cif object to prevent from reclaim by gc.
@@ -211,12 +211,12 @@ private:
      */
     void 
     AddAsyncInfo(
-        callback_info* info);
+        Closure* info);
 
     /**
      * get list of js code to be called asynchronously.
      */
-    std::list<callback_info*>&
+    std::list<Closure*>&
     GetAsyncInfo();
 
     /**
@@ -238,7 +238,7 @@ private:
     DecodeAsyncCallback(
         v8::Isolate* isolate,
         v8::Local<v8::Object>& codeAsyncContainer,
-        callback_info** info,
+        Closure** info,
         bool& await);
 };
 

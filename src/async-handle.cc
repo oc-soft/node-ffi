@@ -1,6 +1,6 @@
 #include "node-ffi/async-handle.h"
 #include <nan.h>
-#include "callback-info-i.h"
+#include "node-ffi/closure.h"
 #include "node-ffi/callback.h"
 
 namespace node_ffi {
@@ -9,7 +9,7 @@ namespace node_ffi {
  * constructor
  */
 AsyncHandle::AsyncHandle(
-    callback_info* callbackInfo)
+    Closure* callbackInfo)
     :   info(callbackInfo),
         loopThread(uv_thread_self())
 {
@@ -164,7 +164,7 @@ AsyncHandle::IsAwait() const
  */
 AsyncHandle*
 AsyncHandle::NewAsyncHandle(
-    callback_info* info,
+    Closure* info,
     bool await)
 {
     int state;

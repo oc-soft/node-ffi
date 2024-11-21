@@ -4,7 +4,7 @@
 #include "node-ffi/callback.h"
 #include "node-ffi/wrap-pointer.h"
 #include "node-ffi/async-handle.h"
-#include "callback-info-i.h"
+#include "node-ffi/closure.h"
 
 #if __OBJC__ || __OBJC2__
 #include "objc-object-wrap.h"
@@ -210,7 +210,7 @@ AsyncCall::RelateAsyncHandle(
         if (element->IsObject()) {
             v8::Local<v8::Object> elemObj;
             elemObj = v8::Local<v8::Object>::Cast(element);
-            callback_info* cbInfo = nullptr;
+            Closure* cbInfo = nullptr;
             bool await = false;
             if (DecodeAsyncCallback(info->isolate, elemObj, &cbInfo, await)) {
                 std::unique_ptr<AsyncHandle> asyncHandle(
@@ -242,12 +242,12 @@ bool
 AsyncCall::DecodeAsyncCallback(
     v8::Isolate* isolate,
     v8::Local<v8::Object>& codeAsyncContainer,
-    callback_info** info,
+    Closure** info,
     bool& await)
 {
     bool result;
     result = false;
-    callback_info* cbInfo;
+    Closure* cbInfo;
     cbInfo = nullptr;
     cbInfo = Callback::DecodeCallbackInfo(isolate, codeAsyncContainer);
     await = false;
@@ -289,7 +289,7 @@ AsyncCall::DecodeAsyncCallback(
  */
 void
 AsyncCall::AddAsyncInfo(
-    callback_info* info)
+    Closure* info)
 {
     asyncCallInfo.push_back(info); 
 }
@@ -297,7 +297,7 @@ AsyncCall::AddAsyncInfo(
 /**
  * get list of js code to be called asynchronously.
  */
-std::list<callback_info*>&
+std::list<Closure*>&
 AsyncCall::GetAsyncInfo()
 {
     return asyncCallInfo;
@@ -310,7 +310,7 @@ void
 AsyncCall::CloseAsyncInfo()
 {
     struct ClearInfo {
-        void operator()(callback_info* info)
+        void operator()(Closure* info)
         {
             info->GetAsyncHandle().reset();
         }
@@ -416,7 +416,7 @@ AsyncCall::RunJs(
     funcObj = info[1]->ToObject(
         isolate->GetCurrentContext()).ToLocalChecked();
      
-    callback_info* callbackInfo = nullptr;
+    Closure* callbackInfo = nullptr;
     callbackInfo = Callback::DecodeCallbackInfo(info.GetIsolate(), funcObj);
     status = callbackInfo ? 0 : -1; 
 
