@@ -5,7 +5,7 @@
 #include <node.h>
 #include <string>
 #include "node-ffi/closure.h"
-#include "code-object.h"
+#include "node-ffi/code-object.h"
 #include "node-ffi/wrap-pointer.h"
 #include "node-ffi/async-handle.h"
 

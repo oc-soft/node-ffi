@@ -1,4 +1,4 @@
-#include "code-object.h"
+#include "node-ffi/code-object.h"
 #include "node-ffi/closure.h"
 
 namespace node_ffi {
