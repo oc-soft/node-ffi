@@ -175,10 +175,11 @@ Closure::Error(
     jsErrorFunction = GetErrorFunction(isolate);
     if (!jsErrorFunction.IsEmpty()) {
         v8::Local<v8::Value> errorFunctionArgv[1];
+        Nan::AsyncResource asyncRes("closure::error");
         errorFunctionArgv[0] = errorValue;
         Nan::Callback nativeCallErrorJs = Nan::Callback(
             jsErrorFunction);
-        nativeCallErrorJs.Call(1, errorFunctionArgv);
+        nativeCallErrorJs(&asyncRes, 1, errorFunctionArgv);
     }
 }
 

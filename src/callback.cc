@@ -4,7 +4,6 @@
 
 #include <node.h>
 #include <string>
-#include "node-ffi.h"
 #include "node-ffi/closure.h"
 #include "code-object.h"
 #include "node-ffi/wrap-pointer.h"
@@ -55,9 +54,10 @@ void Callback::DispatchToV8(Closure *info, void *retval, void **parameters, bool
             functionArgv[1] = argBuf.ToLocalChecked();
      
             Nan::Callback nativeCallJs = Nan::Callback(jsFunction);
-        
-            Local<Value> e = nativeCallJs.Call(2, functionArgv);
-
+            Nan::AsyncResource asyncRes("node_ffi::Callback::DispatchToV8"); 
+            Nan::MaybeLocal<v8::Value> maybeE;
+            maybeE = nativeCallJs(&asyncRes, 2, functionArgv);
+            v8::Local<v8::Value> e = maybeE.ToLocalChecked();
             if (!e->IsUndefined()) {
                 if (dispatched) {
                     info->Error(isolate, e);
@@ -212,8 +212,7 @@ NAN_METHOD(Callback::NewCallback) {
         Local<Object> jsCodeObj = jsCodeObjTemp->NewInstance(
             isolate->GetCurrentContext()).ToLocalChecked();
         codeObj->AttachTo(jsCodeObj);
-        codeBuff->DefineOwnProperty(
-            isolate->GetCurrentContext(),
+        Nan::DefineOwnProperty(codeBuff,
             String::NewFromUtf8(isolate, "code").ToLocalChecked(),
             jsCodeObj,
             static_cast<PropertyAttribute>(

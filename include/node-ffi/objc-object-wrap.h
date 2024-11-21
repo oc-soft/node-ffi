@@ -1,11 +1,15 @@
-#ifndef __OBJC_OBJECT_WRAP_H__
-#define __OBJC_OBJECT_WRAP_H__
+#ifndef __NODE_FFI_OBJC_OBJECT_WRAP_H__
+#define __NODE_FFI_OBJC_OBJECT_WRAP_H__
 
 #if __OBJC__ || __OBJC2__
  
 #include <v8.h>
 #include <objc/objc.h>
 #include "nan.h"
+
+#ifdef __cplusplus
+
+namespace node_ffi {
 
 /**
  * objective c object wrapper
@@ -34,6 +38,10 @@ public:
         id objc);
 };
 
-// vi: se ts=4 sw=4 et:
+
+}
 #endif
+
+#endif
+// vi: se ts=4 sw=4 et:
 #endif

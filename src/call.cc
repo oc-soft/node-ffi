@@ -2,7 +2,7 @@
 
 #include <ffi.h>
 #include "node-ffi/wrap-pointer.h"
-#include "objc-object-wrap.h"
+#include "node-ffi/objc-object-wrap.h"
 
 namespace node_ffi {
 

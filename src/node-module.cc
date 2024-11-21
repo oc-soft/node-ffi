@@ -22,4 +22,4 @@ NAN_MODULE_INIT(init) {
     node_ffi::Callback::Initialize(target);
 }
 
-NODE_MODULE(ffi_bindings, init)
+NAN_MODULE_WORKER_ENABLED(ffi_bindings, init)

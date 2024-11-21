@@ -1,6 +1,7 @@
-#include "objc-object-wrap.h"
+#include "node-ffi/objc-object-wrap.h"
 
 #if __OBJC__ || __OBJC2__
+namespace node_ffi {
 /**
  * constructor
  */
@@ -37,4 +38,6 @@ ObjcObjectWrap::New(
     }
     return result; 
 }
+}
+// vi: se ts=4 sw=4 et:
 #endif

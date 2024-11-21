@@ -255,45 +255,50 @@ void wrap_pointer_cb(char *data, void *hint) {
 }
 
 inline Local<Value> WrapPointer(
-  Isolate* isolate, char *ptr, size_t length, bool external) {
-  Nan::EscapableHandleScope scope;
-  Local<Object> result;
-  if (!external) {
-    result = Nan::NewBuffer(
-      ptr, length, wrap_pointer_cb, NULL).ToLocalChecked();
-  } else {
-    result = Buffer::New(isolate, sizeof(ptr)).ToLocalChecked();
-    char** dstPtr = reinterpret_cast<char**>(
-      Buffer::Data(result));
-    *dstPtr = ptr; 
-    result->DefineOwnProperty(
-      isolate->GetCurrentContext(),
-      String::NewFromUtf8(isolate, "external").ToLocalChecked(),
-      Boolean::New(isolate, true),
-      static_cast<PropertyAttribute>(
-        PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete));
+    Isolate* isolate,
+    char *ptr,
+    size_t length, bool external) {
+    Nan::EscapableHandleScope scope;
+    Local<Object> result;
+    if (!external) {
+        result = Nan::NewBuffer(
+            ptr, length, wrap_pointer_cb, NULL).ToLocalChecked();
+    } else {
+        result = Buffer::New(isolate, sizeof(ptr)).ToLocalChecked();
+        char** dstPtr = reinterpret_cast<char**>(Buffer::Data(result));
+        *dstPtr = ptr; 
+        Nan::DefineOwnProperty(result,
+            String::NewFromUtf8(isolate, "external").ToLocalChecked(),
+            Boolean::New(isolate, true),
+            static_cast<PropertyAttribute>(
+                PropertyAttribute::ReadOnly
+                | PropertyAttribute::DontDelete));
 
-  }
-  return scope.Escape(result);
+    }
+    return scope.Escape(result);
 }
 
 Local<Value> WrapPointer(Isolate* isolate, char *ptr, bool external) {
-  return WrapPointer(isolate, ptr, 0, external);
+    return WrapPointer(isolate, ptr, 0, external);
 }
-char* UnwrapPointer(const Local<Value>& dataobj, bool external) {
-  char* result = nullptr;
-  if (dataobj->IsUint8Array()) {
-    Local<Uint8Array> ptrArray = Local<Uint8Array>::Cast(dataobj);
-    char *ptr = reinterpret_cast<char*>(ptrArray->Buffer()->Data()); 
-    ptr += ptrArray->ByteOffset();
-    if (!external) {
-      result = ptr;
-    } else {
-      char** ptrRef = reinterpret_cast<char**>(ptr);
-      result = *ptrRef;
+
+char*
+UnwrapPointer(
+    const Local<Value>& dataobj,
+    bool external) {
+    char* result = nullptr;
+    if (dataobj->IsUint8Array()) {
+        Local<Uint8Array> ptrArray = Local<Uint8Array>::Cast(dataobj);
+        char *ptr = reinterpret_cast<char*>(ptrArray->Buffer()->Data()); 
+        ptr += ptrArray->ByteOffset();
+        if (!external) {
+            result = ptr;
+        } else {
+            char** ptrRef = reinterpret_cast<char**>(ptr);
+            result = *ptrRef;
+        }
     }
-  }
-  return result;
+    return result;
 }
 
 
@@ -315,88 +320,86 @@ char* UnwrapPointer(Isolate* isolate, const Local<Value>& dataobj) {
   return UnwrapPointer(dataobj, IsExternalPtr(isolate, dataobj));
 }
 
-Local<Value> PointerToPrimitive(
-  Isolate* isolate,
-  void* ptr)
-{
-  Local<Value> result;
-  if (sizeof(ptr) <= sizeof(uint64_t)) {
-    result = BigInt::New(isolate, reinterpret_cast<uint64_t>(ptr));
-  } else {
-    Nan::ThrowError("unsuported runtime environment. pointer size must be equal or less than 64 bit.");
-  }
-  return result;
-}
-
  
-void Initialize(Handle<Object> target) {
-  Nan::HandleScope();
+void Initialize(v8::Local<v8::Object> target,
+    v8::Local<v8::Value> module,
+    void* priv) {
+    Nan::HandleScope();
 
 #if WIN32
   // initialize "floating point support" on Windows?!?!
   // (this is some serious bullshit...)
   // http://support.microsoft.com/kb/37507
-  float x = 2.3f;
+    float x = 2.3f;
 #endif
-  v8::Isolate *isolate = v8::Isolate::GetCurrent();
-  v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+    v8::Isolate *isolate = v8::Isolate::GetCurrent();
+    v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+    v8::Maybe<bool> bState = v8::Nothing<bool>(); 
  
-  // atoi and abs here for testing purposes
-  target->Set(ctx, Nan::New<String>("atoi").ToLocalChecked(),
-    WrapPointer(isolate, (char *)atoi, true));
+    // atoi and abs here for testing purposes
+    bState = target->Set(ctx, Nan::New<String>("atoi").ToLocalChecked(),
+        WrapPointer(isolate, (char *)atoi, true));
 
-  // Windows has multiple `abs` signatures, so we need to manually disambiguate
-  int (*absPtr)(int)(abs);
-  target->Set(ctx, Nan::New<String>("abs").ToLocalChecked(),
-    WrapPointer(isolate, (char *)absPtr, true));
+    // Windows has multiple `abs` signatures,
+    // so we need to manually disambiguate
+    int (*absPtr)(int)(abs);
+    bState = target->Set(ctx, Nan::New<String>("abs").ToLocalChecked(),
+        WrapPointer(isolate, (char *)absPtr, true));
 
-  // sprintf pointer; used in the varadic tests
-  target->Set(ctx, Nan::New<String>("sprintf").ToLocalChecked(),
-    WrapPointer(isolate, (char *)sprintf, true));
-  // hard-coded `strtoul` binding, for the benchmarks
+    // sprintf pointer; used in the varadic tests
+    bState = target->Set(ctx,
+        Nan::New<String>("sprintf").ToLocalChecked(),
+        WrapPointer(isolate, (char *)sprintf, true));
+
+    // hard-coded `strtoul` binding, for the benchmarks
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))
-  Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(Strtoul)->GetFunction(ctx).ToLocalChecked());
+    Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(Strtoul)->GetFunction(ctx).ToLocalChecked());
 
-  Nan::Set(target, Nan::New<String>("set_cb").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(SetCb)->GetFunction(ctx).ToLocalChecked());
-  Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(CallCb)->GetFunction(ctx).ToLocalChecked());
+    Nan::Set(target, Nan::New<String>("set_cb").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(SetCb)->GetFunction(ctx).ToLocalChecked());
+    Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(CallCb)->GetFunction(ctx).ToLocalChecked());
 #else
-  Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(Strtoul)->GetFunction());
+    Nan::Set(target, Nan::New<String>("strtoul").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(Strtoul)->GetFunction());
 
-  Nan::Set(target, Nan::New<String>("set_cb").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(SetCb)->GetFunction());
-  Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
-    Nan::New<FunctionTemplate>(CallCb)->GetFunction());
+    Nan::Set(target, Nan::New<String>("set_cb").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(SetCb)->GetFunction());
+    Nan::Set(target, Nan::New<String>("call_cb").ToLocalChecked(),
+        Nan::New<FunctionTemplate>(CallCb)->GetFunction());
 #endif
-  // also need to test these custom functions
-  target->Set(ctx, Nan::New<String>("double_box").ToLocalChecked(),
-    WrapPointer(isolate, (char *)double_box, true));
-  target->Set(ctx, Nan::New<String>("double_box_ptr").ToLocalChecked(),
-    WrapPointer(isolate, (char *)double_box_ptr, true));
-  target->Set(ctx, Nan::New<String>("area_box").ToLocalChecked(),
-    WrapPointer(isolate, (char *)area_box, true));
-  target->Set(ctx, Nan::New<String>("area_box_ptr").ToLocalChecked(),
-    WrapPointer(isolate, (char *)area_box_ptr, true));
-  target->Set(ctx, Nan::New<String>("create_box").ToLocalChecked(),
-    WrapPointer(isolate, (char *)create_box, true));
-  target->Set(ctx, Nan::New<String>("add_boxes").ToLocalChecked(),
-    WrapPointer(isolate, (char *)add_boxes, true));
-  target->Set(ctx, Nan::New<String>("int_array").ToLocalChecked(),
-    WrapPointer(isolate, (char *)int_array, true));
-  target->Set(ctx, Nan::New<String>("array_in_struct").ToLocalChecked(),
-    WrapPointer(isolate, (char *)array_in_struct, true));
-  target->Set(ctx, Nan::New<String>("callback_func").ToLocalChecked(),
-    WrapPointer(isolate, (char *)callback_func, true));
-  target->Set(ctx, Nan::New<String>("play_ping_pong").ToLocalChecked(),
-    WrapPointer(isolate, reinterpret_cast<char*>(play_ping_pong), true));
-  target->Set(ctx, Nan::New<String>("test_169").ToLocalChecked(),
-    WrapPointer(isolate, reinterpret_cast<char*>(test_169), true));
-  target->Set(ctx, Nan::New<String>("test_ref_56").ToLocalChecked(),
-    WrapPointer(isolate, reinterpret_cast<char*>(test_ref_56), true));
+    // also need to test these custom functions
+    bState = target->Set(ctx,
+        Nan::New<String>("double_box").ToLocalChecked(),
+        WrapPointer(isolate, (char *)double_box, true));
+    bState = target->Set(ctx,
+        Nan::New<String>("double_box_ptr").ToLocalChecked(),
+        WrapPointer(isolate, (char *)double_box_ptr, true));
+    bState = target->Set(ctx, Nan::New<String>("area_box").ToLocalChecked(),
+        WrapPointer(isolate, (char *)area_box, true));
+    bState = target->Set(ctx, Nan::New<String>("area_box_ptr").ToLocalChecked(),
+        WrapPointer(isolate, (char *)area_box_ptr, true));
+    bState = target->Set(ctx, Nan::New<String>("create_box").ToLocalChecked(),
+        WrapPointer(isolate, (char *)create_box, true));
+    bState = target->Set(ctx, Nan::New<String>("add_boxes").ToLocalChecked(),
+        WrapPointer(isolate, (char *)add_boxes, true));
+    bState = target->Set(ctx, Nan::New<String>("int_array").ToLocalChecked(),
+        WrapPointer(isolate, (char *)int_array, true));
+    bState = target->Set(ctx,
+        Nan::New<String>("array_in_struct").ToLocalChecked(),
+        WrapPointer(isolate, (char *)array_in_struct, true));
+    bState = target->Set(
+        ctx, Nan::New<String>("callback_func").ToLocalChecked(),
+        WrapPointer(isolate, (char *)callback_func, true));
+    bState = target->Set(
+        ctx, Nan::New<String>("play_ping_pong").ToLocalChecked(),
+        WrapPointer(isolate, reinterpret_cast<char*>(play_ping_pong), true));
+    bState = target->Set(ctx, Nan::New<String>("test_169").ToLocalChecked(),
+        WrapPointer(isolate, reinterpret_cast<char*>(test_169), true));
+    bState = target->Set(ctx, Nan::New<String>("test_ref_56").ToLocalChecked(),
+        WrapPointer(isolate, reinterpret_cast<char*>(test_ref_56), true));
 }
 
 } // anonymous namespace

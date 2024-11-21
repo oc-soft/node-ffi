@@ -11,11 +11,12 @@
 namespace node_ffi {
 
 #define SET_ENUM_VALUE(_value) \
-  Nan::ForceSet(target, Nan::New<v8::String>(#_value).ToLocalChecked(), \
-  Nan::New<v8::Integer>((uint32_t)_value), \
-  static_cast<v8::PropertyAttribute>( \
-    v8::PropertyAttribute::ReadOnly \
-    | v8::PropertyAttribute::DontDelete))
+  Nan::DefineOwnProperty(target, \
+    Nan::New<v8::String>(#_value).ToLocalChecked(), \
+    Nan::New<v8::Integer>((uint32_t)_value), \
+    static_cast<v8::PropertyAttribute>( \
+        v8::PropertyAttribute::ReadOnly \
+        | v8::PropertyAttribute::DontDelete))
 
 
 NAN_MODULE_INIT(Dl::Register)
@@ -24,16 +25,17 @@ NAN_MODULE_INIT(Dl::Register)
     v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
     // dl functions used by the DynamicLibrary JS class
     v8::Local<v8::Object> o = Nan::New<v8::Object>();
-    o->Set(ctx,
+    v8::Maybe<bool> state = v8::Nothing<bool>();
+    state = o->Set(ctx,
         Nan::New<v8::String>("dlopen").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)dlopen, true));
-    o->Set(ctx,
+    state = o->Set(ctx,
         Nan::New<v8::String>("dlclose").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)dlclose, true));
-    o->Set(ctx,
+    state = o->Set(ctx,
         Nan::New<v8::String>("dlsym").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)dlsym, true));
-    o->Set(ctx,
+    state = o->Set(ctx,
         Nan::New<v8::String>("dlerror").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)dlerror, true));
   /* flags for dlopen() */
@@ -62,7 +64,7 @@ NAN_MODULE_INIT(Dl::Register)
 
   /* flags for dlsym() */
 #ifdef RTLD_NEXT
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("RTLD_NEXT").ToLocalChecked(),
         node_ffi::WrapPointer(isolate,
             (char *)RTLD_NEXT, true),
@@ -71,7 +73,7 @@ NAN_MODULE_INIT(Dl::Register)
             | v8::PropertyAttribute::DontDelete));
 #endif
 #ifdef RTLD_DEFAULT
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("RTLD_DEFAULT").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)RTLD_DEFAULT, true),
         static_cast<v8::PropertyAttribute>(
@@ -79,7 +81,7 @@ NAN_MODULE_INIT(Dl::Register)
             | v8::PropertyAttribute::DontDelete));
 #endif
 #ifdef RTLD_SELF
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("RTLD_SELF").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)RTLD_SELF, true),
         static_cast<v8::PropertyAttribute>(
@@ -87,14 +89,14 @@ NAN_MODULE_INIT(Dl::Register)
             | v8::PropertyAttribute::DontDelete));
 #endif
 #ifdef RTLD_MAIN_ONLY
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("RTLD_MAIN_ONLY").ToLocalChecked(),
         node_ffi::WrapPointer(isolate, (char *)RTLD_MAIN_ONLY, true),
         static_cast<v8::PropertyAttribute>(
             v8::PropertyAttribute::ReadOnly
             | v8::PropertyAttribute::DontDelete));
 #endif
-    target->Set(ctx, Nan::New<v8::String>("Dl").ToLocalChecked(), o);
+    state = target->Set(ctx, Nan::New<v8::String>("Dl").ToLocalChecked(), o);
 }
 
 }

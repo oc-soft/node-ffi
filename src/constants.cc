@@ -3,11 +3,12 @@
 #include <ffi.h>
 
 #define SET_ENUM_VALUE(_value) \
-  Nan::ForceSet(target, Nan::New<v8::String>(#_value).ToLocalChecked(), \
-  Nan::New<v8::Integer>((uint32_t)_value), \
-  static_cast<v8::PropertyAttribute>( \
-    v8::PropertyAttribute::ReadOnly \
-    | v8::PropertyAttribute::DontDelete))
+  Nan::DefineOwnProperty(target, \
+    Nan::New<v8::String>(#_value).ToLocalChecked(), \
+    Nan::New<v8::Integer>((uint32_t)_value), \
+    static_cast<v8::PropertyAttribute>( \
+      v8::PropertyAttribute::ReadOnly \
+      | v8::PropertyAttribute::DontDelete))
 
 namespace node_ffi {
 
@@ -22,25 +23,25 @@ NAN_MODULE_INIT(Constants::Register)
         Nan::New<v8::String>(
             node_ffi::FFIConfig::GetVersion()).ToLocalChecked());
 
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("FFI_ARG_SIZE").ToLocalChecked(),
         Nan::New<v8::Uint32>((uint32_t)sizeof(ffi_arg)),
         static_cast<v8::PropertyAttribute>(
             v8::PropertyAttribute::ReadOnly
             | v8::PropertyAttribute::DontDelete));
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("FFI_SARG_SIZE").ToLocalChecked(),
         Nan::New<v8::Uint32>((uint32_t)sizeof(ffi_sarg)),
         static_cast<v8::PropertyAttribute>(
             v8::PropertyAttribute::ReadOnly
             | v8::PropertyAttribute::DontDelete));
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("FFI_TYPE_SIZE").ToLocalChecked(),
         Nan::New<v8::Uint32>((uint32_t)sizeof(ffi_type)),
         static_cast<v8::PropertyAttribute>(
             v8::PropertyAttribute::ReadOnly
             | v8::PropertyAttribute::DontDelete));
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("FFI_CIF_SIZE").ToLocalChecked(),
         Nan::New<v8::Uint32>((uint32_t)sizeof(ffi_cif)),
         static_cast<v8::PropertyAttribute>(
@@ -80,7 +81,7 @@ NAN_MODULE_INIT(Constants::Register)
 #if __OBJC__ || __OBJC2__
     hasObjc = true;
 #endif
-    Nan::ForceSet(target,
+    Nan::DefineOwnProperty(target,
         Nan::New<v8::String>("HAS_OBJC").ToLocalChecked(),
         Nan::New<v8::Boolean>(hasObjc),
         static_cast<v8::PropertyAttribute>(
