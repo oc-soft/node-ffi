@@ -23,15 +23,15 @@
   },
   "main": "./lib/ffi",
   "dependencies": {
-    "bindings": "~1.2.0",
-    "debug": "2",
+    "bindings": "latest",
+    "debug": "latest",
     "nan": "latest",
     "ref": "oc-soft/node-ref#master",
     "ref-struct": "oc-soft/node-ref-struct#master"
   },
   "devDependencies": {
     "fs-extra": "latest",
-    "mocha": "*",
+    "mocha": "latest",
     "ref-array": "oc-soft/node-ref-array#master"
   },
   "scripts": {
