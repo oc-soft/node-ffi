@@ -43,13 +43,23 @@ WrapPointer(
         v8::Local<v8::Uint8Array> resArray;
         if (!bfPtr.IsEmpty()) {
             v8::Local<v8::Uint8Array> resArray0 = bfPtr.ToLocalChecked();
-            v8::Maybe<bool> propRes = resArray0->DefineOwnProperty(
+            v8::Maybe<bool> propRes = v8::Nothing<bool>();
+            propRes = resArray0->DefineOwnProperty(
                 isolate->GetCurrentContext(),
                 v8::String::NewFromUtf8(isolate, "external").ToLocalChecked(),
                 v8::Boolean::New(isolate, true),
                 static_cast<v8::PropertyAttribute>(
                     v8::PropertyAttribute::ReadOnly
                     | v8::PropertyAttribute::DontDelete));
+            if (propRes.FromJust()) {
+                propRes = resArray0->DefineOwnProperty(
+                    isolate->GetCurrentContext(),
+                    v8::String::NewFromUtf8(
+                        isolate, "indirection").ToLocalChecked(),
+                    v8::Integer::New(isolate, 2),
+                    static_cast<v8::PropertyAttribute>(
+                        v8::PropertyAttribute::DontDelete));
+            }
             if (propRes.FromJust()) {
                 resArray = resArray0;
             }
