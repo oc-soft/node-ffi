@@ -17,9 +17,18 @@ NAN_MODULE_INIT(init) {
     node_ffi::Constants::Register(target);
     node_ffi::AsyncCall::Register(target);
     node_ffi::Dl::Register(target);
-    node_ffi::Errno::Register(target);
     node_ffi::Types::Register(target);
     node_ffi::Callback::Initialize(target);
+#ifndef _WIN32
+    node_ffi::Errno::Register(target);
+    // errno would be register with dynamic library for windows.
+    // In windows environment, you might select one option from followings.
+    // 1. ucrtbase.dll
+    // 2. vcruntime<version>.dll
+    // 3. msvc.dll 
+    // In ffi_binding default windows c runtime is liked with libcrul.lib
+    // static library. You can not get errno about functions from c runtime dll.
+#endif
 }
 
 NAN_MODULE_WORKER_ENABLED(ffi_bindings, init)
