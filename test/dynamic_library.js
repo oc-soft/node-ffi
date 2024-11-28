@@ -25,7 +25,7 @@ describe('DynamicLibrary', function () {
       var handle = DynamicLibrary(lib + ffi.LIB_EXT)
       var symbol = handle.get('free')
       assert(Buffer.isBuffer(symbol))
-      assert.equal(symbol.type.ffi_type.external ? ref.sizeof.pointer : 0, symbol.length)
+      assert.equal(ref.sizeof.pointer, symbol.length)
     })
 
     it('should set the "name" property to the name of the symbol', function () {

@@ -9,7 +9,6 @@ describe('errno()', function () {
   afterEach(gc)
 
   it('should be a object', function () {
-    console.log(errno)
     assert.equal('object', typeof errno)
   })
 
