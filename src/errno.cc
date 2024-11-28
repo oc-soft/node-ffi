@@ -1,8 +1,6 @@
 #include "node-ffi/errno.h"
 #include <cerrno>
 #include "node-ffi/wrap-pointer.h"
-#include "node-ffi/errno-i.h"
-
 
 namespace node_ffi {
 
@@ -29,12 +27,12 @@ SetErrno(
     if (sizeof(int) <= sizeof(int32_t)) {
         v8::Maybe<int32_t> valueInt = value->Int32Value(ctx);
         if (valueInt.IsJust()) {
-            SetErrno(valueInt.FromJust());
+            errno = valueInt.FromJust();
         }
     } else {
         v8::Maybe<int64_t> valueInt = value->IntegerValue(ctx);
         if (valueInt.IsJust()) {
-            SetErrno(static_cast<int>(valueInt.FromJust()));
+            errno = static_cast<int>(valueInt.FromJust());
         }
     }
 }

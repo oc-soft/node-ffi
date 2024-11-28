@@ -16,7 +16,6 @@
         'src/wrap-pointer.cc',
         'src/dl.cc',
         'src/errno.cc',
-        'src/errno-i.cc',
         'src/types.cc',
         'src/ffi-config.cc'
       ],
@@ -28,55 +27,42 @@
         'deps/libffi/libffi.gyp:ffi'
       ],
       'conditions': [
-        ['OS=="win"', {
-          'sources': [
-              'src/win32-dlfcn.cc',
-              'src/win32-errno-i.cc'
-          ],
-          'defines': [
-              'FFI_BUILDING'
-          ],
-          'configurations': {
-            'Debug': {
-              'msvs_settings': {
-                'VCCLCompilerTool': {
-                  'WholeProgramOptimization': 'false'
-                },
-                'VCLibrarianTool': {
-                  'AdditionalOptions' : [
-                    '/LTCG:OFF'
-                  ] 
-                },
-                'VCLinkerTool': {
-                  'AdditionalOptions': [
-                    '/LTCG:OFF',
-                    '/MAP'
-                  ] 
-                }
-              }
-            },
-            'Release': {
-              'msvs_settings': {
-                'VCLinkerTool': {
-                  'AdditionalOptions': [
-                    '/MAP'
-                  ] 
-                }
+        [
+          'OS=="win"',
+          {
+            'sources': [
+                'src/win32-dlfcn.cc',
+            ],
+            'defines': [
+                'FFI_BUILDING'
+            ],
+            'msvs_settings': {
+              'VCCLCompilerTool': {
+              },
+              'VCLibrarianTool': {
+              },
+              'VCLinkerTool': {
+                'AdditionalOptions': [
+                  '/MAP'
+                ] 
               }
             }
           }
-        }],
-        ['OS=="mac"', {
-          'xcode_settings': {
-            'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
-            'OTHER_CFLAGS': [
-                '-ObjC++'
-            ]
-          },
-          'libraries': [
-              '-lobjc'
-          ],
-        }]
+        ],
+        [
+          'OS=="mac"',
+          {
+            'xcode_settings': {
+              'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
+              'OTHER_CFLAGS': [
+                  '-ObjC++'
+              ]
+            },
+            'libraries': [
+                '-lobjc'
+            ],
+          }
+        ]
       ]
     }
   ]
