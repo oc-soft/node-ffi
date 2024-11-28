@@ -13,7 +13,7 @@ describe('errno()', function () {
   })
 
   it('should set the errno with out-of-range "strtoul" value', function () {
-    var lib = process.platform == 'win32' ? 'msvcrt' : 'libc'
+    var lib = process.platform == 'win32' ? 'ucrtbase' : 'libc'
     var strtoul = new ffi.Library(lib, {
       'strtoul': [ 'ulong', [ 'string', 'string', 'int' ] ]
     }).strtoul
