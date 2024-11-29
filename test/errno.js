@@ -19,6 +19,8 @@ describe('errno()', function () {
     }).strtoul
     strtoul('1234567890123456789012345678901234567890', null, 0)
     assert.equal(34, errno.errno) // errno == ERANGE
+    errno.errno = 0
+    assert.equal(0, errno.errno) // errno == 0
   })
 
 })
