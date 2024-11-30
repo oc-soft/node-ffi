@@ -16,32 +16,46 @@ namespace node_ffi {
  */
 
 NAN_METHOD(Call::Invoke) {
-  if (info.Length() != 4) {
-    Nan::ThrowError("ffi_call() requires 4 arguments!");
-    return;
-  }
-  v8::Isolate *isolate = info.GetIsolate();
-  char *cif = node_ffi::UnwrapPointer(isolate, info[0]);
-  char *fn = node_ffi::UnwrapPointer(isolate, info[1]);
-  char *res = node_ffi::UnwrapPointer(isolate, info[2]);
-  char *fnargs = node_ffi::UnwrapPointer(isolate, info[3]);
+    if (info.Length() != 4) {
+        Nan::ThrowError("ffi_call() requires 4 arguments!");
+        return;
+    }
+    v8::Isolate *isolate = info.GetIsolate();
+    ffi_cif *cif = reinterpret_cast<ffi_cif *>(
+        node_ffi::UnwrapPointer(isolate, info[0]));
+    void (*fn)(void) = FFI_FN(node_ffi::UnwrapPointer(isolate, info[1]));
+    void* res = node_ffi::UnwrapPointer(isolate, info[2]);
+    void** fnargs = reinterpret_cast<void**>(
+        node_ffi::UnwrapPointer(isolate, info[3]));
 
 #if __OBJC__ || __OBJC2__
     @try {
 #endif
-      ffi_call(
-          (ffi_cif *)cif,
-          FFI_FN(fn),
-          (void *)res,
-          (void **)fnargs
-        );
+        ffi_call(cif, fn, res, fnargs);
 #if __OBJC__ || __OBJC2__
     } @catch (id ex) {
-      return THROW_ERROR_EXCEPTION(ObjcObjectWrap::New(isolate, ex, true));
+
+        v8::Local<v8::Value> exValue = node_ffi::WrapPointer(
+            isolate, reinterpret_cast<char*>(ex), true);
+
+        if (!exValue.IsEmpty()) {
+            v8::Local<v8::Value> exContainer;
+            v8::Local<v8::Object> exObj = v8::Local<v8::Object>::Cast(exValue);
+            exContainer = ObjcObjectWrap::New(isolate, ex).ToLocalChecked();
+            v8::Maybe<bool> bState = v8::Nothing<bool>();
+            bState = exObj->DefineOwnProperty(
+                isolate->GetCurrentContext(),
+                v8::String::NewFromUtf8(
+                    isolate, "exceptionWrap").ToLocalChecked(),
+                exContainer,
+                static_cast<v8::PropertyAttribute>(
+                    v8::PropertyAttribute::ReadOnly
+                    | v8::PropertyAttribute::DontDelete));
+            Nan::ThrowError(exValue);
+        }
     }
 #endif
-
-  info.GetReturnValue().SetUndefined();
+    info.GetReturnValue().SetUndefined();
 }
 
 NAN_MODULE_INIT(Call::Register) {
@@ -56,7 +70,7 @@ NAN_MODULE_INIT(Call::Register) {
         Nan::New<v8::FunctionTemplate>(
             Invoke)->GetFunction(ctx).ToLocalChecked());
 #else 
-  // main function exports
+    // main function exports
     Nan::Set(target,
         Nan::New<v8::String>("ffi_call").ToLocalChecked(),
         Nan::New<v8::FunctionTemplate>(Invoke)->GetFunction());
@@ -65,3 +79,4 @@ NAN_MODULE_INIT(Call::Register) {
 }
 
 }
+// vi: se ts=4 sw=4 et:

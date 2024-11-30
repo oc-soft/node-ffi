@@ -5,7 +5,7 @@ namespace node_ffi {
 /**
  * constructor
  */
-ObjcObjectWrap::ObjcObjectWrap(id objc = Nil)
+ObjcObjectWrap::ObjcObjectWrap(id objc)
 {
     [objc retain];
     this->objc = objc;
@@ -21,7 +21,7 @@ ObjcObjectWrap::~ObjcObjectWrap()
     }
 }
 
-static v8::MaybeLocal<v8::Object>
+v8::MaybeLocal<v8::Object>
 ObjcObjectWrap::New(
     v8::Isolate* isolate,
     id objc)
@@ -29,11 +29,14 @@ ObjcObjectWrap::New(
     v8::MaybeLocal<v8::Object> result;
 
     ObjcObjectWrap* wrapObj;
-    wrapObj = new (std::nothrow) ObjecObjectWrap(id);
+    wrapObj = new (std::nothrow) ObjcObjectWrap(objc);
     if (wrapObj) {
-        result = v8::Object::New(isolate);
-        if (result->IsObject()) {
-            wrapObj->Wrap(result);   
+        v8::Local<v8::ObjectTemplate> jsTemp;
+        jsTemp = v8::ObjectTemplate::New(isolate);
+        jsTemp->SetInternalFieldCount(1);
+        result = jsTemp->NewInstance(isolate->GetCurrentContext());
+        if (!result.IsEmpty()) {
+            wrapObj->Wrap(result.ToLocalChecked());
         }
     }
     return result; 

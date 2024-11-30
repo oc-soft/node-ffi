@@ -36,6 +36,7 @@
   },
   "scripts": {
     "test": "node-gyp rebuild --directory test && node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
+    "test-lldb": "node-gyp rebuild --debug --directory test && lldb node -- --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-gdb": "node-gyp rebuild --debug --directory test && gdb --args node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-only": "node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec"
    },

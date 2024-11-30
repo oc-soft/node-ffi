@@ -37,8 +37,8 @@ class AsyncCall {
     SetErr(
         id err);
 
-    MaybeLocal<v8::Object>
-    GetErr(Isolate* isolate);
+    v8::MaybeLocal<v8::Object>
+    GetErr(v8::Isolate* isolate);
 #endif
 
     void

@@ -7,7 +7,7 @@
 #include "node-ffi/closure.h"
 
 #if __OBJC__ || __OBJC2__
-#include "objc-object-wrap.h"
+#include "node-ffi/objc-object-wrap.h"
 #endif
 
 namespace node_ffi {
@@ -46,11 +46,11 @@ AsyncCall::SetErr(
     this->err = err;
 }
 
-MaybeLocal<v8::Object>
+v8::MaybeLocal<v8::Object>
 AsyncCall::GetErr(
-    Isolate* isolate)
+    v8::Isolate* isolate)
 {
-    MaybeLocal<v8::Object> result;
+    v8::MaybeLocal<v8::Object> result;
     if (err) {
         result = ObjcObjectWrap::New(isolate, err); 
     }
@@ -533,7 +533,7 @@ AsyncCall::FinishedRunning(
     if (p->HasErr()) {
 
         // an Objective-C error was thrown
-        argv[0] = p->GetErr(isolate).LocalChecked();
+        argv[0] = p->GetErr(isolate).ToLocalChecked();
     }
 #endif
     Nan::TryCatch try_catch;
