@@ -22,6 +22,7 @@
     "node": ">=0.10.0"
   },
   "main": "./lib/ffi",
+  "types": "./lib/ffi",
   "dependencies": {
     "bindings": "latest",
     "debug": "latest",
@@ -30,16 +31,18 @@
     "ref-struct": "oc-soft/node-ref-struct#master"
   },
   "devDependencies": {
+    "@types/node": "latest",
     "fs-extra": "latest",
     "mocha": "latest",
-    "ref-array": "oc-soft/node-ref-array#master"
+    "ref-array": "oc-soft/node-ref-array#master",
+    "typescript": "latest"
   },
   "scripts": {
     "test": "node-gyp rebuild --directory test && node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-lldb": "node-gyp rebuild --debug --directory test && lldb node -- --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-gdb": "node-gyp rebuild --debug --directory test && gdb --args node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-only": "node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec"
-   },
+  },
   "repository": {
     "type": "git",
     "url": "http://github.com/oc-soft/node-ffi.git"
