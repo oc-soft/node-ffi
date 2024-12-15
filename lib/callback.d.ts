@@ -1,9 +1,10 @@
 import type { TypeFFI, BufferFFI } from './type'
+import type { TypeBase } from 'ref'
 
 
 export default function Callback(
-  retType: string | TypeFFI,
-  argTypes: Array<string | TypeFFI>,
+  retType: string | TypeFFI | TypeBase,
+  argTypes: Array<string | TypeFFI | TypeBase>,
   abiOrFunc: number | ((... args: any) => any),
   func?: (... args: any) => any): BufferFFI
   

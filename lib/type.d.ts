@@ -23,7 +23,7 @@ export interface TypeFFI extends TypeBase {
   ffi_type: BufferFFI
 }
 
-declare type Type = {
+declare const Type = {
   /**
    * convert some object into TypeFFI
    */

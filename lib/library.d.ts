@@ -1,4 +1,5 @@
 import type { TypeFFI } from './type'
+import type { TypeBase } from 'ref'
 
 
 /**
@@ -22,8 +23,8 @@ declare type FuncOption = {
  * library interface
  */
 declare type FunctionParam = [ 
-  TypeFFI, 
-  TypeFFI[],
+  TypeFFI | TypeBase | string, 
+  Array<TypeFFI | TypeBase | string>,
   FuncOption?
 ]
 
