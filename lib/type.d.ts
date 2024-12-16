@@ -23,22 +23,25 @@ export interface TypeFFI extends TypeBase {
   ffi_type: BufferFFI
 }
 
-declare const Type = {
-  /**
-   * convert some object into TypeFFI
-   */
-  (type: string | TypeFFI | TypeBase): TypeFFI
+
+/**
+ * convert some object into TypeFFI
+ */
+export function Type(type: string | TypeFFI | TypeBase): TypeFFI
+
+export namespace Type {
   /**
    * primitive type equivalent pointer
    */
-  pointerPrimitive: TypeFFI
+  const pointerPrimitive: TypeFFI
 
   /**
    * ffi type
    */
-  FFI_TYPE: TypeFFI
+  const FFI_TYPE: TypeFFI
 }
 
-export default Type
+
+export default Type 
 
 // vi: se ts=2 =sw=2 et:
