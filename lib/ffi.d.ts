@@ -11,7 +11,5 @@ export { default as errno } from './errno'
 export { default as ffiType } from './type'
 export { default as Library, EXT as LIB_EXT } from './library'
 
-const FFI_TYPE = ffi_type.FFI_TYPE
-export FFI_TYPE
 
 // vi: se ts=2 sw=2 et:

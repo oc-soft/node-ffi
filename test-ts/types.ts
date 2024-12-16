@@ -6,6 +6,7 @@ import { Buffer } from 'node:buffer'
 export function run(): void {
   const typeFFI = ffiType(ref.types.int)
   assert.ok(Buffer.isBuffer(typeFFI))
+  console.log(ffiType.FFI_TYPE)
 }
 
 

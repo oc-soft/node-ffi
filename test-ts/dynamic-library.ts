@@ -4,7 +4,7 @@ import * as process from 'node:process'
 
 export function run(): void {
   const lib = process.platform != 'win32' ? 'libc' : 'ucrtbase'
-  const handle = DynamicLibrary(lib + LIB_EXT)
+  const handle = new DynamicLibrary(lib + LIB_EXT)
   assert.ok(handle instanceof DynamicLibrary)
 }
 

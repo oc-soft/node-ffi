@@ -33,12 +33,12 @@ export namespace Type {
   /**
    * primitive type equivalent pointer
    */
-  const pointerPrimitive: TypeFFI
+  export const pointerPrimitive: TypeFFI
 
   /**
    * ffi type
    */
-  const FFI_TYPE: TypeFFI
+  export const FFI_TYPE: TypeFFI
 }
 
 

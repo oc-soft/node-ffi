@@ -30,11 +30,11 @@ export class DynamicLibrary {
   /**
    * constructor
    * @param {string} path - dynamic library path
-   * @param {number} mode - dynamic library opening mode
+   * @param {number=} mode - dynamic library opening mode
    */
   constructor(
     path: string,
-    mode: number)
+    mode?: number)
 
 
   /**
@@ -55,5 +55,7 @@ export class DynamicLibrary {
    */
   error(): number
 }
+
+export { DynamicLibrary as default }
 
 // vi: se ts=2 sw=2 et:
