@@ -1,6 +1,9 @@
-import type { TypeBase } from 'ref'
+import { createRequire } from 'node:module'
+
 import type { BufferStruct } from 'ref-struct'
-import type { Buffer } from 'node:buffer'
+import type { TypeBase } from 'ref'
+
+const require = createRequire(import.meta.url)
 
 /**
  * some buffers used in this library have external pointer flag.
@@ -27,21 +30,23 @@ export interface TypeFFI extends BufferStruct {
 /**
  * convert some object into TypeFFI
  */
-export function Type(type: string | TypeFFI | TypeBase): TypeFFI
+export interface Type {
+  (type: string | TypeFFI | TypeBase): TypeFFI
 
-export namespace Type {
   /**
    * primitive type equivalent pointer
    */
-  export const pointerPrimitive: TypeFFI
+  pointerPrimitive: TypeFFI
 
   /**
    * ffi type
    */
-  export const FFI_TYPE: TypeFFI
+  FFI_TYPE: TypeFFI
 }
 
 
-export default Type 
+const Type = require('./type.js') as Type
 
-// vi: se ts=2 =sw=2 et:
+export { Type, Type as default }
+
+// vi: se ts=2 sw=2 et:

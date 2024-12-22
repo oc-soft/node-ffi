@@ -22,6 +22,10 @@
     "node": ">=0.10.0"
   },
   "main": "./lib/ffi",
+  "exports": {
+    "import": "./lib/ffi.mjs",
+    "require": "./lib/ffi.js"
+  },
   "types": "./lib/ffi",
   "dependencies": {
     "bindings": "latest",
@@ -43,7 +47,9 @@
     "test-lldb": "node-gyp rebuild --debug --directory test && lldb node -- --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-gdb": "node-gyp rebuild --debug --directory test && gdb --args node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
     "test-only": "node --expose-gc node_modules/mocha/lib/cli/cli.js --reporter spec",
-    "test-ts": "ts-node --project test-ts/tsconfig.json test-ts/main.ts"
+    "compile-mjs": "tsc --project lib/tsconfig.json",
+    "compile-test-ts": "tsc --project test-ts/tsconfig.json",
+    "test-ts": "TS_NODE_PROJECT=test-ts/tsconfig.json node --loader ts-node/esm test-ts/main.mts"
   },
   "repository": {
     "type": "git",

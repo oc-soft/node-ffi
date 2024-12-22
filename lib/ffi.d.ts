@@ -10,6 +10,9 @@ export { default as Callback } from './callback'
 export { default as errno } from './errno'
 export { default as ffiType } from './type'
 export { default as Library, EXT as LIB_EXT } from './library'
+import type { TypeFFI } from './type'
+
+export const FFI_TYPE: TypeFFI
 
 
 // vi: se ts=2 sw=2 et:

@@ -1,4 +1,4 @@
-import { Callback, ForeignFunction } from '../'
+import { Callback, ForeignFunction } from 'ffi'
 import * as ref from 'ref'
 import * as assert from 'node:assert'
 

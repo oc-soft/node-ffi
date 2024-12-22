@@ -1,5 +1,6 @@
-import type { TypeFFI } from './type'
+import type { TypeFFI } from './type.mjs'
 import type { TypeBase } from 'ref'
+import { createRequire } from 'node:module'
 
 
 /**
@@ -51,11 +52,6 @@ declare type ExtType = {
 }
 
 /**
- * os dynamic library extension map
- */
-export const EXT: string
-
-/**
  * It creates library which has specified functions.
  * Or it appends some specified functions into spefied library.
  * @param {string} libFile - library path
@@ -63,13 +59,30 @@ export const EXT: string
  * @param {{[funcName: string]: (... args: any) => any}= } lib - library
  * @return library object which has some functions.
  */
-export default function Library(
-  libFile: string,
-  funcs: FunctionParams,
-  lib?: {
-    [funcName: string]: (... args: any) => any
-  }): {
-    [funcName: string]: (... args: any) => any 
-  }
+export interface Library {
+  (libFile: string,
+    funcs: FunctionParams,
+    lib?: {
+      [funcName: string]: (... args: any) => any
+    }): {
+      [funcName: string]: (... args: any) => any 
+    }
+  /**
+   * os specific dynamic library extension 
+   */
+  EXT: string
+}
+
+const require = createRequire(import.meta.url)
+
+const Library = require('./library.js') as Library
+
+
+const EXT = Library.EXT
+
+export {
+  Library,
+  Library as default
+}
 
 // vi: se ts=2 sw=2 et:

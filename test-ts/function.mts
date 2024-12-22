@@ -1,4 +1,4 @@
-import { Function } from '../'
+import { Function } from 'ffi'
 import * as assert from 'node:assert'
 
 

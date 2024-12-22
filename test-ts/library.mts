@@ -1,4 +1,4 @@
-import { Library } from '../'
+import { Library } from 'ffi'
 import * as assert from 'node:assert'
 import * as process from 'node:process'
 
