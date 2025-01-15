@@ -1,4 +1,5 @@
 #include "node-ffi/prep.h"
+#include <v8.h>
 #include <ffi.h>
 #include <node.h>
 #include "node-ffi/wrap-pointer.h"
@@ -31,7 +32,7 @@ NAN_METHOD(Prep::Cif) {
     return THROW_ERROR_EXCEPTION("ffi_prep_cif() requires 5 arguments!");
   }
 
-  v8::Handle<v8::Value> cif_buf = info[0];
+  v8::Local<v8::Value> cif_buf = info[0];
   if (!node::Buffer::HasInstance(cif_buf)) {
     return THROW_ERROR_EXCEPTION("prepCif(): Buffer required as first arg");
   }
@@ -81,7 +82,7 @@ NAN_METHOD(Prep::CifVar) {
         return;
   }
 
-  v8::Handle<v8::Value> cif_buf = info[0];
+  v8::Local<v8::Value> cif_buf = info[0];
   if (!node::Buffer::HasInstance(cif_buf)) {
         THROW_ERROR_EXCEPTION("prepCifVar(): Buffer required as first arg");
         return;

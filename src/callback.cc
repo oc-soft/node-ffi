@@ -277,7 +277,7 @@ void Callback::Invoke(
  * Init stuff.
  */
 
-void Callback::Initialize(Handle<Object> target) {
+void Callback::Initialize(v8::Local<Object> target) {
   Nan::HandleScope scope;
 #if defined(V8_MAJOR_VERSION) && (V8_MAJOR_VERSION > 4 ||                      \
   (V8_MAJOR_VERSION == 4 && defined(V8_MINOR_VERSION) && V8_MINOR_VERSION > 3))

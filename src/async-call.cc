@@ -177,6 +177,7 @@ AsyncCall::SetAsyncCodes(
     jsArgv.Reset(isolate, codes); 
 }
 
+#if V8_MAJOR_VERSION >= 12
 /**
  * relate javascript code with current worker
  */
@@ -228,6 +229,42 @@ AsyncCall::RelateAsyncHandle(
     }, &info); 
     return info.result;
 }
+#else
+/**
+ * relate javascript code with current worker
+ */
+bool
+AsyncCall::RelateAsyncHandle(
+    v8::Isolate* isolate,
+    v8::Local<v8::Array>& codeBufferArray)
+{
+    bool result = true;
+    for (uint32_t idx = 0; idx < codeBufferArray->Length(); idx++) {
+        Nan::HandleScope scope;
+        v8::MaybeLocal<v8::Value> elementMaybe = codeBufferArray->Get(
+            isolate->GetCurrentContext(), idx);
+        v8::Local<v8::Value> element = elementMaybe.ToLocalChecked();
+        if (element->IsObject()) {
+            v8::Local<v8::Object> elemObj = element.As<v8::Object>();
+            Closure* cbInfo = nullptr;
+            bool await = false;
+            if (DecodeAsyncCallback(isolate, elemObj, &cbInfo, await)) {
+                std::unique_ptr<AsyncHandle> asyncHandle(
+                    node_ffi::AsyncHandle::NewAsyncHandle(cbInfo, await));
+                if (asyncHandle) {
+                    cbInfo->SetAsyncHandle(asyncHandle);
+                    AddAsyncInfo(cbInfo);
+                } else {
+                    result = false;
+                    break;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+#endif
 
 /**
  * decode callback info and parameters for async handle
