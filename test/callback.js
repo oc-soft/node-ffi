@@ -27,6 +27,7 @@ describe('Callback', function () {
 
   it('should not call "set()" of a pointer type', function () {
     var voidType = Object.create(ref.types.void)
+    voidType.size = ref.sizeof.pointer
     voidType.get = function () {
       throw new Error('"get()" should not be called')
     }
