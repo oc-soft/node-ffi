@@ -38,7 +38,8 @@
             ],
             'msvs_settings': {
               'VCCLCompilerTool': {
-                'LanguageStandard': 'stdcpp20'
+                'AdditionalOptions': [ '/std:c++20' ],
+		'PreprocessorDefinitions' : [ 'NOMINMAX' ]
               },
               'VCLibrarianTool': {
               },
