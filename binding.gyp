@@ -38,6 +38,7 @@
             ],
             'msvs_settings': {
               'VCCLCompilerTool': {
+                'LanguageStandard': 'stdcpp20'
               },
               'VCLibrarianTool': {
               },
