@@ -35,6 +35,7 @@
     "ref-struct": "oc-soft/node-ref-struct#master"
   },
   "devDependencies": {
+    "@electron/rebuild": "latest",
     "@types/node": "latest",
     "fs-extra": "latest",
     "mocha": "latest",
