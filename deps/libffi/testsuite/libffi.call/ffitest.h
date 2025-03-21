@@ -5,6 +5,9 @@
 #include <ffi.h>
 #include "fficonfig.h"
 
+#include <float.h>
+#include <math.h>
+
 #if defined HAVE_STDINT_H
 #include <stdint.h>
 #endif
@@ -15,22 +18,48 @@
 
 #define MAX_ARGS 256
 
-#define CHECK(x) !(x) ? abort() : 0
+#define CHECK(x) \
+   do { \
+      if(!(x)){ \
+         printf("Check failed:\n%s\n", #x); \
+         abort(); \
+      } \
+   } while(0)
 
-/* Define __UNUSED__ that also other compilers than gcc can run the tests.  */
+#define CHECK_FLOAT_EQ(x, y) \
+   do { \
+      if(fabs((x) - (y)) > FLT_EPSILON){ \
+         printf("Check failed CHECK_FLOAT_EQ(%s, %s)\n", #x, #y); \
+         abort(); \
+      } \
+   } while(0)
+
+#define CHECK_DOUBLE_EQ(x, y) \
+   do { \
+      if(fabs((x) - (y)) > DBL_EPSILON){ \
+         printf("Check failed CHECK_FLOAT_EQ(%s, %s)\n", #x, #y); \
+         abort(); \
+      } \
+   } while(0)
+
+/* Define macros so that compilers other than gcc can run the tests.  */
 #undef __UNUSED__
 #if defined(__GNUC__)
 #define __UNUSED__ __attribute__((__unused__))
+#define __STDCALL__ __attribute__((stdcall))
+#define __THISCALL__ __attribute__((thiscall))
+#define __FASTCALL__ __attribute__((fastcall))
+#define __MSABI__ __attribute__((ms_abi))
 #else
 #define __UNUSED__
+#define __STDCALL__ __stdcall
+#define __THISCALL__ __thiscall
+#define __FASTCALL__ __fastcall
 #endif
 
-/* Define __FASTCALL__ so that other compilers than gcc can run the tests.  */
-#undef __FASTCALL__
-#if defined _MSC_VER
-#define __FASTCALL__ __fastcall
-#else
-#define __FASTCALL__ __attribute__((fastcall))
+#ifndef ABI_NUM
+#define ABI_NUM FFI_DEFAULT_ABI
+#define ABI_ATTR
 #endif
 
 /* Prefer MAP_ANON(YMOUS) to /dev/zero, since we don't need to keep a
@@ -59,8 +88,8 @@
 
 #endif
 
-/* MinGW kludge.  */
-#ifdef _WIN64
+/* msvc kludge.  */
+#if defined(_MSC_VER)
 #define PRIdLL "I64d"
 #define PRIuLL "I64u"
 #else
@@ -120,51 +149,15 @@
 
 /* MSVC kludge.  */
 #if defined _MSC_VER
+#if !defined(__cplusplus) || defined(__STDC_FORMAT_MACROS)
 #define PRIuPTR "lu"
 #define PRIu8 "u"
 #define PRId8 "d"
 #define PRIu64 "I64u"
 #define PRId64 "I64d"
 #endif
-
-#ifdef USING_MMAP
-static inline void *
-allocate_mmap (size_t size)
-{
-  void *page;
-#if defined (HAVE_MMAP_DEV_ZERO)
-  static int dev_zero_fd = -1;
 #endif
 
-#ifdef HAVE_MMAP_DEV_ZERO
-  if (dev_zero_fd == -1)
-    {
-      dev_zero_fd = open ("/dev/zero", O_RDONLY);
-      if (dev_zero_fd == -1)
-	{
-	  perror ("open /dev/zero: %m");
-	  exit (1);
-	}
-    }
-#endif
-
-
-#ifdef HAVE_MMAP_ANON
-  page = mmap (NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-	       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-#ifdef HAVE_MMAP_DEV_ZERO
-  page = mmap (NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-	       MAP_PRIVATE, dev_zero_fd, 0);
-#endif
-
-  if (page == (void *) MAP_FAILED)
-    {
-      perror ("virtual memory exhausted");
-      exit (1);
-    }
-
-  return page;
-}
-
+#ifndef PRIuPTR
+#define PRIuPTR "u"
 #endif

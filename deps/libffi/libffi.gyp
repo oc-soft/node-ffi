@@ -97,6 +97,7 @@
         'src/raw_api.c',
         'src/java_raw_api.c',
         'src/closures.c',
+	'src/tramp.c'
       ],
       'defines': [
         'PIC',
@@ -129,12 +130,6 @@
             'src/x86/ffi64.c'
           ],
           'conditions': [
-            ['OS=="mac"', {
-              'sources': [
-                'src/x86/darwin.S',
-                'src/x86/darwin64.S'
-              ]
-            }],
             ['OS=="win"', {
               # the libffi dlmalloc.c file has a bunch of implicit conversion
               # warnings, and the main ffi.c file contains one, so silence them
@@ -149,7 +144,7 @@
                 }]
               ]
             }],
-            ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
+            ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" or OS=="mac"', {
               'sources': [
                 'src/x86/unix64.S',
                 'src/x86/sysv.S'
