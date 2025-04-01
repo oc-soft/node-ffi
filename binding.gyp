@@ -34,7 +34,8 @@
                 'src/win32-dlfcn.cc',
             ],
             'defines': [
-                'FFI_BUILDING'
+                'FFI_BUILDING',
+		'FFI_STATIC_BUILD'
             ],
             'msvs_settings': {
               'VCCLCompilerTool': {

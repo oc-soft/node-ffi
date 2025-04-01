@@ -44,7 +44,8 @@
     'conditions': [
       ['OS == "win"', {
         'defines': [
-          'WIN32'
+          'WIN32',
+          'FFI_STATIC_BUILD'
         ],
       }]
     ],
@@ -117,44 +118,61 @@
         ],
       },
       'conditions': [
-        ['target_arch=="arm"', {
-          'sources': [ 'src/arm/ffi.c' ],
-          'conditions': [
-            ['OS=="linux"', {
-              'sources': [ 'src/arm/sysv.S' ]
-            }]
-          ]
-        }, { # ia32 or x64
-          'sources': [
-            'src/x86/ffi.c',
-            'src/x86/ffi64.c'
-          ],
-          'conditions': [
-            ['OS=="win"', {
-              # the libffi dlmalloc.c file has a bunch of implicit conversion
-              # warnings, and the main ffi.c file contains one, so silence them
-              'msvs_disabled_warnings': [ 4267 ],
-              # the ffi64.c file is never compiled on Windows
-              'sources!': [ 'src/x86/ffi64.c' ],
-              'conditions': [
-                ['target_arch=="ia32"', {
-                  'sources': [ 'src/x86/win32.asm' ]
-                }, { # target_arch=="x64"
-                  'sources': [ 'src/x86/win64.asm' ]
-                }]
+        ['target_arch=="arm"',
+          {
+            'sources': [ 'src/arm/ffi.c' ],
+            'conditions': [
+              ['OS=="linux"', {
+                'sources': [ 'src/arm/sysv.S' ]
+              }]
+            ]
+          },
+          { # ia32 or x64
+            'sources': [
+              'src/x86/ffi.c',
+              'src/x86/ffi64.c'
+            ],
+            'conditions': [
+              ['OS=="win"',
+                {
+                  # the libffi dlmalloc.c file has a bunch of implicit
+                  # conversion warnings, and the main ffi.c file contains one,
+                  # so silence them
+                  'msvs_disabled_warnings': [ 4267 ],
+                  # the ffi64.c file is never compiled on Windows
+                  'sources!': [
+                    'src/x86/ffi64.c',
+                    'src/x86/ffi.c',
+                  ],
+                  'conditions': [
+                    ['target_arch=="ia32"',
+                      {
+                        'sources': [
+                        ]
+                      },
+                      { # target_arch=="x64"
+                        'sources': [
+                          'src/x86/ffiw64.c',
+                          'src/x86/win64_intel.asm'
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              ],
+              ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" or OS=="mac"', 
+                {
+                  'sources': [
+                    'src/x86/unix64.S',
+                    'src/x86/sysv.S'
+                  ]
+                }
               ]
-            }],
-            ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" or OS=="mac"', {
-              'sources': [
-                'src/x86/unix64.S',
-                'src/x86/sysv.S'
-              ]
-            }]
-          ]
-        }],
+            ]
+          }
+        ],
       ]
     },
-
     {
       'target_name': 'test',
       'type': 'executable',
