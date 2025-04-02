@@ -98,7 +98,7 @@
         'src/raw_api.c',
         'src/java_raw_api.c',
         'src/closures.c',
-	'src/tramp.c'
+        'src/tramp.c'
       ],
       'defines': [
         'PIC',
@@ -130,7 +130,14 @@
           { # ia32 or x64
             'sources': [
               'src/x86/ffi.c',
-              'src/x86/ffi64.c'
+              'src/x86/ffi64.c',
+              'src/x86/ffiw64.c',
+              'src/x86/sysv.S',
+              'src/x86/sysv_intel.S',
+              'src/x86/unix64.S',
+              'src/x86/win64.S',
+              'src/x86/win64_intel.S',
+              'src/x86/win64.S',
             ],
             'conditions': [
               ['OS=="win"',
@@ -141,18 +148,30 @@
                   'msvs_disabled_warnings': [ 4267 ],
                   # the ffi64.c file is never compiled on Windows
                   'sources!': [
-                    'src/x86/ffi64.c',
                     'src/x86/ffi.c',
+                    'src/x86/ffi64.c',
+                    'src/x86/ffiw64.c',
+                    'src/x86/sysv.S',
+                    'src/x86/sysv_intel.S',
+                    'src/x86/unix64.S',
+                    'src/x86/win64.S',
+                    'src/x86/win64_intel.S',
                   ],
                   'conditions': [
                     ['target_arch=="ia32"',
                       {
-                        'sources': [
-                        ]
+                        'sources!': [
+                          'src/x86/ffi64.c',
+                          'src/x86/sysv.S',
+                          'src/x86/sysv_intel.S',
+                          'src/x86/unix64.S',
+                          'src/x86/win64.S',
+                          'src/x86/win64_intel.S',
+                          'src/x86/win64.S',
+                         ]
                       },
                       { # target_arch=="x64"
                         'sources': [
-                          'src/x86/ffiw64.c',
                           'src/x86/win64_intel.asm'
                         ]
                       }
@@ -162,9 +181,28 @@
               ],
               ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" or OS=="mac"', 
                 {
-                  'sources': [
-                    'src/x86/unix64.S',
-                    'src/x86/sysv.S'
+                  'conditions': [
+                    ['target_arch=="ia32"',
+                      {
+                        'sources!': [
+                          'src/x86/ffi64.c',
+                          'src/x86/ffiw64.c',
+                          'src/x86/unix64.S',
+                          'src/x86/win64.S',
+                          'src/x86/win64_intel.S',
+                         ]
+                      }
+                    ],
+                    ['target_arch=="x64"',
+                      {
+                        'sources!': [
+                          'src/x86/ffi.c',
+                          'src/x86/sysv.S',
+                          'src/x86/sysv_intel.S',
+                          'src/x86/win64_intel.S',
+                        ]
+                      }
+                    ]
                   ]
                 }
               ]
