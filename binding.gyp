@@ -1,4 +1,31 @@
 {
+  'conditions': [
+    [
+      'OS == "win"', 
+      {
+        'conditions': [
+          ['"AMD64" == <!(cmd /c %PROCESSOR_ARCHITECTURE%)', 
+            {
+              'variables': {
+                'target_arch%': 'x86_64',
+              },
+            },
+            {
+              'variables': {
+                'target_arch%': '<!(cmd /c %PROCESSOR_ARCHITECTURE%)',
+                # it will be set i386 almost
+              }
+            }
+          ],
+        ]
+      },
+      {
+        'variables': {
+            'target_arch%': '<!(uname -m)',
+        }
+      }
+    ]
+  ],
   'targets': [
     {
       'target_name': 'ffi_bindings',
@@ -26,6 +53,7 @@
       'dependencies': [
         'deps/libffi/libffi.gyp:ffi'
       ],
+
       'conditions': [
         [
           'OS=="win"',
@@ -55,16 +83,43 @@
         [
           'OS=="mac"',
           {
+            'conditions': [
+              ['target_arch=="arm64" or target_arch=="aarch64"',
+                {
+                  'variables': {
+                    'target_arch_name': 'aarch64'
+                  }
+                }
+              ],
+              ['target_arch=="x86_64"', 
+                {
+                  'variables': {
+                    'target_arch_name': 'x86-64'
+                  }
+                },
+                {
+                  'variables': {
+                    'target_arch_name': '<(target_arch)'
+                  }
+                }
+              ]
+            ],
+            'cflags': [
+              '-target', '<(target_arch_name)'
+            ],
+            'ldflags': [
+              '-target', '<(target_arch_name)'
+            ],
+            'libraries': [
+              '-lobjc'
+            ], 
             'xcode_settings': {
               'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
               'OTHER_CFLAGS': [
                   '-ObjC++'
               ]
             },
-            'libraries': [
-                '-lobjc'
-            ],
-          }
+          },
         ]
       ]
     }

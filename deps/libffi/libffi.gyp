@@ -5,11 +5,34 @@
 #   ./gyp/gyp -f make --depth=`pwd` libffi.gyp
 #   make
 #   ./out/Debug/test
-
 {
-  'variables': {
-    'target_arch%': 'ia32', # built for a 32-bit CPU by default
-  },
+  'conditions': [
+    [
+      'OS == "win"', 
+      {
+        'conditions': [
+          ['"AMD64" == <!(cmd /c %PROCESSOR_ARCHITECTURE%)', 
+            {
+              'variables': {
+                'target_arch%': 'x86_64',
+              },
+            },
+            {
+              'variables': {
+                'target_arch%': '<!(cmd /c %PROCESSOR_ARCHITECTURE%)',
+                # it will be set i386 almost
+              }
+            }
+          ],
+        ]
+      },
+      {
+        'variables': {
+            'target_arch%': '<!(uname -m)',
+        }
+      }
+    ]
+  ],
   'target_defaults': {
     'default_configuration': 'Debug',
     'configurations': {
@@ -42,12 +65,45 @@
       },
     },
     'conditions': [
-      ['OS == "win"', {
-        'defines': [
-          'WIN32',
-          'FFI_STATIC_BUILD'
-        ],
-      }]
+      [
+        'OS == "win"', {
+          'defines': [
+            'WIN32',
+            'FFI_STATIC_BUILD'
+          ],
+        }
+      ],
+      [
+        'OS == "mac"', {
+          'conditions': [
+            ['target_arch=="arm64" or target_arch=="aarch64"',
+              {
+                'variables': {
+                  'target_arch_name': 'aarch64'
+                }
+              }
+            ],
+            ['target_arch=="x86_64"', 
+              {
+                'variables': {
+                  'target_arch_name': 'x86-64'
+                }
+              },
+              {
+                'variables': {
+                  'target_arch_name': '<(target_arch)'
+                }
+              }
+            ]
+          ],
+          'cflags': [
+            '-target', '<(target_arch_name)'
+          ],
+          'ldflags': [
+            '-target', '<(target_arch_name)'
+          ]
+        }
+      ]
     ],
   },
 
@@ -56,7 +112,7 @@
     ['OS=="win"', {
       'target_defaults': {
         'conditions': [
-          ['target_arch=="ia32"', {
+          ['target_arch=="ia32" or target_arch=="i386"', {
             'variables': { 'ml': ['ml', '/nologo', '/safeseh' ] }
           }, {
             'variables': { 'ml': ['ml64', '/nologo' ] }
@@ -82,7 +138,6 @@
       },
     }],
   ],
-
   'targets': [
     {
       'target_name': 'ffi',
@@ -91,7 +146,6 @@
 
       # for CentOS 5 support: https://github.com/rbranson/node-ffi/issues/110
       'standalone_static_library': 1,
-
       'sources': [
         'src/prep_cif.c',
         'src/types.c',
@@ -118,16 +172,24 @@
         ],
       },
       'conditions': [
-        ['target_arch=="arm"',
+        ['target_arch=="arm"', {
+          'sources': [ 'src/arm/ffi.c' ],
+          'conditions': [
+            ['OS=="linux"', {
+              'sources': [ 'src/arm/sysv.S' ]
+            }]
+          ]
+        }],
+        ['target_arch=="aarch64" or target_arch=="arm64"',
           {
-            'sources': [ 'src/arm/ffi.c' ],
-            'conditions': [
-              ['OS=="linux"', {
-                'sources': [ 'src/arm/sysv.S' ]
-              }]
-            ]
-          },
-          { # ia32 or x64
+            'include_dirs': [
+              'src/aarch64'
+            ],
+            'sources': [ 
+              'src/aarch64/ffi.c',
+              'src/aarch64/sysv.S'
+            ],
+          }, { # ia32 or x64
             'sources': [
               'src/x86/ffi.c',
               'src/x86/ffi64.c',
@@ -209,6 +271,20 @@
             ]
           }
         ],
+        [
+          'target_arch=="arm64"', 
+          {
+            'include_dirs': [
+              'config/<(OS)/aarch64',
+            ],
+            'direct_dependent_settings': {
+              'include_dirs': [
+                # platform and arch-specific headers
+                'config/<(OS)/aarch64'
+              ],
+            },
+          }
+        ]
       ]
     },
     {
@@ -217,7 +293,6 @@
       'dependencies': [ 'ffi' ],
       'sources': [ 'test.c' ]
     },
-
     {
       'target_name': 'closure-test',
       'type': 'executable',
