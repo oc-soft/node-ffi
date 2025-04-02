@@ -1,31 +1,7 @@
 {
-  'conditions': [
-    [
-      'OS == "win"', 
-      {
-        'conditions': [
-          ['"AMD64" == <!(cmd /c %PROCESSOR_ARCHITECTURE%)', 
-            {
-              'variables': {
-                'target_arch%': 'x86_64',
-              },
-            },
-            {
-              'variables': {
-                'target_arch%': '<!(cmd /c %PROCESSOR_ARCHITECTURE%)',
-                # it will be set i386 almost
-              }
-            }
-          ],
-        ]
-      },
-      {
-        'variables': {
-            'target_arch%': '<!(uname -m)',
-        }
-      }
-    ]
-  ],
+  'variables': {
+    'target_arch%': 'ia32',
+  },
   'targets': [
     {
       'target_name': 'ffi_bindings',
