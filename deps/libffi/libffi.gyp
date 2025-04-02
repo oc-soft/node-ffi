@@ -150,7 +150,6 @@
                   'sources!': [
                     'src/x86/ffi.c',
                     'src/x86/ffi64.c',
-                    'src/x86/ffiw64.c',
                     'src/x86/sysv.S',
                     'src/x86/sysv_intel.S',
                     'src/x86/unix64.S',
@@ -162,7 +161,8 @@
                       {
                         'sources!': [
                           'src/x86/ffi64.c',
-                          'src/x86/sysv.S',
+                          'src/x86/ffiw64.c',
+		                      'src/x86/sysv.S',
                           'src/x86/sysv_intel.S',
                           'src/x86/unix64.S',
                           'src/x86/win64.S',
