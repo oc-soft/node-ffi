@@ -1,7 +1,4 @@
 {
-  'variables': {
-    'target_arch%': 'ia32',
-  },
   'targets': [
     {
       'target_name': 'ffi_bindings',
@@ -39,12 +36,12 @@
             ],
             'defines': [
                 'FFI_BUILDING',
-		'FFI_STATIC_BUILD'
+                'FFI_STATIC_BUILD'
             ],
             'msvs_settings': {
               'VCCLCompilerTool': {
                 'AdditionalOptions': [ '/std:c++20' ],
-		'PreprocessorDefinitions' : [ 'NOMINMAX' ]
+                'PreprocessorDefinitions' : [ 'NOMINMAX' ]
               },
               'VCLibrarianTool': {
               },
