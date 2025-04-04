@@ -1,4 +1,8 @@
 {
+  'variables': {
+    'target_arch%': 'ia32',
+    # it will be set i386 almost
+  },
   'targets': [
     {
       'target_name': 'ffi_bindings',

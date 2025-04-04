@@ -139,15 +139,13 @@
       'include_dirs': [
         'include',
         # platform and arch-specific headers
-        'config/<(OS)/<(target_arch)',
-        'config/linux/x64'
+        'config/<(OS)/<(target_arch)'
       ],
       'direct_dependent_settings': {
         'include_dirs': [
           'include',
           # platform and arch-specific headers
-          'config/<(OS)/<(target_arch)',
-          'config/linux/x64'
+          'config/<(OS)/<(target_arch)'
         ],
       },
       'conditions': [
